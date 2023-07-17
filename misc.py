@@ -1,5 +1,6 @@
 
 from datetime import datetime
+import numpy as np
 
 # =====================================================================================================================
 
@@ -7,7 +8,8 @@ def getFixDictionnary(line):
     try: 
         mdict = {
             "provider" : line[1],
-            "timestamp": datetime.fromtimestamp(int(line[8])/1e3),
+            "timestamp": float(line[8])/1e3,
+            'datetime' : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
             "latitude" : float(line[2]),
             "longitude": float(line[3]),
             "altitude" : float(line[4]) if line[4] != "" else float("nan"),
@@ -38,7 +40,8 @@ def getRawDictionnary(line):
             if keys[i] == "Svid":
                 mdict[keys[i]] = int(values[i])
             elif keys[i] == "timestamp":
-                mdict[keys[i]] = int(line[1]),
+                mdict[keys[i]] = float(line[1])/1e3,
+                mdict['datetime'] = np.datetime64(int(line[1]), 'ms')
             else:
                 mdict[keys[i]] = values[i]
             i += 1
@@ -48,9 +51,33 @@ def getRawDictionnary(line):
         mdict["prn"] = f"{getSystemLetter(mdict['ConstellationType'])}{mdict['Svid']:02d}"
 
     except ValueError:
+
         return
 
     return mdict
+
+# =====================================================================================================================
+
+def getPosDictionnary(line):
+    try:
+        leapseconds = np.timedelta64(18, 's')
+        datetime = np.datetime64(f'{line[0:4]}-{line[5:7]}-{line[8:10]}T{line[11:23]}') - leapseconds
+        timestamp = (datetime - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
+        mdict = {
+            "provider" : 'REF',
+            "datetime" : datetime,
+            "timestamp": timestamp, 
+            "latitude" : float(line[24:38]),
+            "longitude": float(line[39:53]),
+            "altitude" : float(line[54:64]),
+        }
+    except ValueError:
+        return
+
+    return mdict
+    
+
+# =====================================================================================================================
 
 def getSystemLetter(system:int):
     match system:
