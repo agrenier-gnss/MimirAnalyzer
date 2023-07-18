@@ -11,9 +11,21 @@ from logparser import LogReader, PosReader
 def getDifferenceGrid(log : LogReader):
 
     reset_button = pn.widgets.Button(name='Reset', button_type='primary')
+
+    providersCheckButtons_A = pn.widgets.RadioButtonGroup(
+        name='Providers A', 
+        value='GPS', 
+        options=list(set(log.fix["provider"])),
+        button_type='primary')
+    
+    providersCheckButtons_B = pn.widgets.RadioButtonGroup(
+        name='Providers B', 
+        value='FLP', 
+        options=list(set(log.fix["provider"])),
+        button_type='primary')
     
     # Bind widget callback
-    dfi_diff = hvplot.bind(plotDiff, log, reset_button).interactive()
+    dfi_diff = hvplot.bind(plotDiff, log, reset_button, providersCheckButtons_A, providersCheckButtons_B).interactive()
 
     # Format
     date_formatter = DatetimeTickFormatter(minutes='%H:%M')
@@ -32,35 +44,34 @@ def getDifferenceGrid(log : LogReader):
     diff_grid[2:3, 0:1] = dfi_diff.hvplot(
          x="datetime", y="up", ylabel="Up [m]", **plot_opts).output()
     
-    return pn.Column(reset_button, diff_grid)
+    return pn.Column(pn.Row(reset_button, providersCheckButtons_A, "V.S.", providersCheckButtons_B), diff_grid)
     
 
 # =============================================================================
 
-def plotDiff(log, reset_button):
+def plotDiff(log, reset_button, providersCheckButtons_A, providersCheckButtons_B):
 
     # Align 
-    gps = log.fix.loc[log.fix['provider'].isin(['GPS']), ['datetime', 'latitude', 'longitude', 'altitude']]
-    ref = log.fix.loc[log.fix['provider'].isin(['REF']), ['datetime', 'latitude', 'longitude', 'altitude']]
+    pos_A = log.fix.loc[log.fix['provider'].isin([providersCheckButtons_A]), 
+                      ['datetime', 'latitude', 'longitude', 'altitude']]
+    pos_B = log.fix.loc[log.fix['provider'].isin([providersCheckButtons_B]), 
+                      ['datetime', 'latitude', 'longitude', 'altitude']]
 
-    gps = gps.set_index('datetime')
-    ref = ref.set_index('datetime')
+    pos_A = pos_A.set_index('datetime')
+    pos_B = pos_B.set_index('datetime')
 
-    ref_enu = ref.iloc[0].tolist()[0:4]
+    ref_enu = pos_A.iloc[0].tolist()[0:4]
 
-    gps[["east", "north", "up"]] = gps.apply(
+    pos_A[["east", "north", "up"]] = pos_A.apply(
         lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
         axis='columns', result_type='expand')
-    ref[["east", "north", "up"]] = ref.apply(
+    pos_B[["east", "north", "up"]] = pos_B.apply(
         lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
         axis='columns', result_type='expand')
     
-    gps, ref = gps.align(ref)
+    pos_A, pos_B = pos_A.align(pos_B)
     
-    s = gps.interpolate(method='time') - ref.interpolate(method='time')
-
-    # s['latitude'] = s['latitude'].apply(lambda x: x*43.5e3)
-    # s['longitude'] = s['longitude'].apply(lambda x: x*43.5e3)
+    s = pos_A.interpolate(method='time') - pos_B.interpolate(method='time')
 
     return s
 

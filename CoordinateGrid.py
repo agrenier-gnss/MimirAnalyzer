@@ -40,7 +40,7 @@ def getCoordinateGrid(log : LogReader):
     coordinate_grid[2:3, 0:1] = dfi_fix.hvplot(
          x="datetime", y="altitude", by="provider", ylabel="Altitude [m]", **plot_opts).output()
     
-    return pn.Column(reset_button, coordinate_grid), providersCheckButtons
+    return pn.Column(pn.Row(reset_button, providersCheckButtons), coordinate_grid)
 
 # =============================================================================
 

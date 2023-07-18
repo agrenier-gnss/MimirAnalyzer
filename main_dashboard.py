@@ -17,7 +17,7 @@ from CoordinateGrid import getCoordinateGrid
 from DifferenceGrid import getDifferenceGrid
 from GnssMeasurementGrid import getGnssMeasurementGrid
 
-# panel serve dashboard.py --show --autoreload
+# panel serve main_dashboard.py --show --autoreload
 
 # =============================================================================
 # Data
@@ -35,17 +35,15 @@ print(log.fix)
 # =============================================================================
 # Tabs
 
-sidebarlist = [f'File: {filepath}']
+sidebarlist = []
 # Map tab
 map_grid = getMapGrid(log)
 
 # Coordinates tab
-coordinate_grid, coordinate_widgets = getCoordinateGrid(log)
-sidebarlist.append(coordinate_widgets)
+coordinate_grid = getCoordinateGrid(log)
 
 # Difference tab
 difference_grid = getDifferenceGrid(log)
-# sidebarlist.append(difference_widgets)
 
 # GNSS Measurement tab
 gnssmeas_grid, gnssmeas_widgets = getGnssMeasurementGrid(log)
@@ -64,8 +62,8 @@ template = pn.template.FastGridTemplate(
 tabs = pn.Tabs(
     ("Map", map_grid), 
     ("Coordinates", coordinate_grid),
-    ("Measurements", gnssmeas_grid),
-    ("Difference", difference_grid), dynamic=True)
+    ("Differences", difference_grid),
+    ("Measurements", gnssmeas_grid), dynamic=True)
 
 template.main[:6, :12] = tabs
 template.servable()
