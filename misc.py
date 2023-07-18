@@ -3,6 +3,20 @@ from datetime import datetime
 import numpy as np
 
 # =====================================================================================================================
+class GnssSystems:
+    GPS = 1
+    GLONASS = 3
+    BEIDOU = 5
+    GALILEO = 6
+
+STATE_TOW_DECODED = 8
+
+# =====================================================================================================================
+
+# Value should be fix by the first value received and keep for the rest of the pseudorange conversion
+GNSS_TIME_BIAS_NANOS = np.nan
+
+# =====================================================================================================================
 
 def getFixDictionnary(line):
     try: 
@@ -38,6 +52,8 @@ def getRawDictionnary(line):
         mdict = {}
         for i in range(len(keys)):
             if keys[i] == "Svid":
+                mdict[keys[i]] = int(values[i])
+            elif keys[i] == "ConstellationType":
                 mdict[keys[i]] = int(values[i])
             elif keys[i] == "timestamp":
                 mdict[keys[i]] = float(line[1])/1e3,
@@ -81,13 +97,49 @@ def getPosDictionnary(line):
 
 def getSystemLetter(system:int):
     match system:
-        case 1:
+        case GnssSystems.GPS:
             return 'G'
-        case 3: 
+        case GnssSystems.GLONASS:
             return 'R'
-        case 5:
+        case GnssSystems.BEIDOU:
             return 'C'
-        case 6:
+        case GnssSystems.GALILEO:
             return 'E'
         case _:
             return 'U'
+        
+# =====================================================================================================================
+
+
+def getPseudoranges(raw : dict):
+
+    # Check if tracking state correct
+    state = raw["State"]
+    if not (state & STATE_TOW_DECODED):
+        pseudorange = np.nan
+        return
+
+    # Retrieve transmitted time 
+    t_tx = raw["ReceivedSvTimeNanos"]
+
+    # Retrieve received time
+    if np.isnan(GNSS_TIME_BIAS_NANOS):
+        GNSS_TIME_BIAS_NANOS = raw["FullBiasNanos"] + raw["BiasNanos"]
+        print(GNSS_TIME_BIAS_NANOS)
+    
+    t_rx_gnss = raw["TimeNanos"] + raw["TimeOffsetNanos"] - GNSS_TIME_BIAS_NANOS
+
+    # Transform receive time from GNSS to constellation time
+    match(raw["ConstellationType"]):
+        case GnssSystems.GPS:
+            return 'G'
+        case GnssSystems.GLONASS:
+            return 'R'
+        case GnssSystems.BEIDOU:
+            return 'C'
+        case GnssSystems.GALILEO:
+            return
+        case _:
+            return
+            
+    return
