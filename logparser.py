@@ -45,7 +45,7 @@ class LogReader():
         self.fix = pd.DataFrame(fix)
         self.raw = pd.DataFrame(raw)
         
-        # print(self.fix)
+        print(self.raw)
 
         return
     
@@ -91,8 +91,8 @@ class PosReader():
 
 if __name__ == "__main__":
     
-    # filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
-    # log = LogReader(filepath)
+    filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
+    log = LogReader(filepath)
 
     filepath = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"
     log = PosReader(filepath)

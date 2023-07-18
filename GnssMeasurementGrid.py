@@ -13,7 +13,8 @@ measurementsOptions = ["TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullB
                 "AccumulatedDeltaRangeUncertaintyMeters","CarrierCycles","CarrierPhase",\
                 "CarrierPhaseUncertainty","MultipathIndicator","SnrInDb","AgcDb", "BasebandCn0DbHz",\
                 "FullInterSignalBiasNanos","FullInterSignalBiasUncertaintyNanos","SatelliteInterSignalBiasNanos",\
-                "SatelliteInterSignalBiasUncertaintyNanos"]
+                "SatelliteInterSignalBiasUncertaintyNanos", "Pseudorange", "Svid"]
+measurementsOptions.sort()
 
 meas_select = pn.widgets.Select(name='Select', value='Cn0DbHz', options=measurementsOptions)
 
@@ -25,6 +26,7 @@ def getGnssMeasurementGrid(log : LogReader):
     satelliteList.sort()
 
     # Define widgets
+    reset_button = pn.widgets.Button(name='Reset', button_type='primary')
     _sats = [item for item in satelliteList if item.startswith('G')]
     checkbox_group_gps = pn.widgets.CheckBoxGroup(
         name='Checkbox Group', value=[_sats[0]], 
@@ -47,7 +49,7 @@ def getGnssMeasurementGrid(log : LogReader):
         inline=False)
     
     # Bind plot callback
-    def selectMeasurement(log, meas, gps_svid, glo_svid, gal_svid, bei_svid):
+    def selectMeasurement(reset_button, log, meas, gps_svid, glo_svid, gal_svid, bei_svid):
         selected_prn = []
             
         if gps_svid == [] and glo_svid == [] and gal_svid == [] and bei_svid == []:
@@ -60,9 +62,11 @@ def getGnssMeasurementGrid(log : LogReader):
 
         if not selected_prn:
             return
+        
+        print(selected_prn)
         return log.raw.loc[log.raw['prn'].isin(selected_prn), [meas, 'prn', 'timestamp', 'datetime']]
     
-    dfi_raw = hvplot.bind(selectMeasurement, log, meas_select, 
+    dfi_raw = hvplot.bind(selectMeasurement, reset_button, log, meas_select, 
                           checkbox_group_gps, checkbox_group_glo, 
                           checkbox_group_gal, checkbox_group_bei).interactive()
 
@@ -79,7 +83,7 @@ def getGnssMeasurementGrid(log : LogReader):
     sat_selection = pn.Row(pn.Column('G', checkbox_group_gps), pn.Column('R', checkbox_group_glo),
                            pn.Column('E', checkbox_group_gal), pn.Column('C', checkbox_group_bei))
 
-    return gnssmeas_grid, [meas_select, sat_selection]
+    return pn.Column(reset_button, gnssmeas_grid), [meas_select, sat_selection]
 
 # =============================================================================
 

@@ -9,9 +9,21 @@ class GnssSystems:
     BEIDOU = 5
     GALILEO = 6
 
-STATE_TOW_DECODED = 8
+STATE_TOW_DECODED           = 8
+STATE_GLO_TOD_DECODED       = 128
+STATE_GAL_E1C_2ND_CODE_LOCK = 2048
 
 # =====================================================================================================================
+
+SPEED_OF_LIGHT = 299792458 # [m/s]
+
+LEAP_SECONDS = 19 # As in 2023
+
+SECONDS_IN_DAY = int(86400)
+SECONDS_IN_WEEK = int(604800)
+NANOSECONDS_IN_WEEK = int(SECONDS_IN_WEEK * 1e9)
+NANOSECONDS_IN_DAY = int(SECONDS_IN_DAY * 1e9)
+NANOSECONDS_IN_100MS = int(1e8)
 
 # Value should be fix by the first value received and keep for the rest of the pseudorange conversion
 GNSS_TIME_BIAS_NANOS = np.nan
@@ -55,6 +67,8 @@ def getRawDictionnary(line):
                 mdict[keys[i]] = int(values[i])
             elif keys[i] == "ConstellationType":
                 mdict[keys[i]] = int(values[i])
+            elif keys[i] == "State":
+                mdict[keys[i]] = int(values[i])
             elif keys[i] == "timestamp":
                 mdict[keys[i]] = float(line[1])/1e3,
                 mdict['datetime'] = np.datetime64(int(line[1]), 'ms')
@@ -65,6 +79,7 @@ def getRawDictionnary(line):
         mdict["CodeType"] = line[-2]
         mdict["ChipsetElapsedRealtimeNanos"] = float(line[-1])
         mdict["prn"] = f"{getSystemLetter(mdict['ConstellationType'])}{mdict['Svid']:02d}"
+        mdict["Pseudorange"] = getPseudoranges(mdict)
 
     except ValueError:
 
@@ -110,14 +125,14 @@ def getSystemLetter(system:int):
         
 # =====================================================================================================================
 
-
 def getPseudoranges(raw : dict):
+
+    global GNSS_TIME_BIAS_NANOS
 
     # Check if tracking state correct
     state = raw["State"]
-    if not (state & STATE_TOW_DECODED):
-        pseudorange = np.nan
-        return
+    if not (state & STATE_TOW_DECODED) and not (state & STATE_GAL_E1C_2ND_CODE_LOCK):
+        return np.nan
 
     # Retrieve transmitted time 
     t_tx = raw["ReceivedSvTimeNanos"]
@@ -125,21 +140,29 @@ def getPseudoranges(raw : dict):
     # Retrieve received time
     if np.isnan(GNSS_TIME_BIAS_NANOS):
         GNSS_TIME_BIAS_NANOS = raw["FullBiasNanos"] + raw["BiasNanos"]
-        print(GNSS_TIME_BIAS_NANOS)
     
     t_rx_gnss = raw["TimeNanos"] + raw["TimeOffsetNanos"] - GNSS_TIME_BIAS_NANOS
 
     # Transform receive time from GNSS to constellation time
     match(raw["ConstellationType"]):
         case GnssSystems.GPS:
-            return 'G'
+            t_rx = t_rx_gnss % NANOSECONDS_IN_WEEK
         case GnssSystems.GLONASS:
-            return 'R'
+            if (state & STATE_GLO_TOD_DECODED):
+                t_rx = t_rx_gnss % NANOSECONDS_IN_DAY + (3*3600 - LEAP_SECONDS)*1e9
+            else:
+                return np.nan
         case GnssSystems.BEIDOU:
-            return 'C'
+            t_rx = (t_rx_gnss % NANOSECONDS_IN_WEEK) + 14*1e9
         case GnssSystems.GALILEO:
-            return
+            if (state & STATE_GAL_E1C_2ND_CODE_LOCK):
+                t_rx = t_rx_gnss % NANOSECONDS_IN_100MS
+            else:
+                t_rx = t_rx_gnss % NANOSECONDS_IN_WEEK
         case _:
-            return
+            return np.nan
+        
+    # Build pseudorange
+    pseudorange = (t_rx - t_tx) / 1e9 * SPEED_OF_LIGHT
             
-    return
+    return pseudorange
