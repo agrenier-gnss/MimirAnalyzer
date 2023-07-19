@@ -92,6 +92,8 @@ class PosReader():
 if __name__ == "__main__":
     
     filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
+    filepath = "./.data/log_GNSS_20230414152332.txt"
+    filepath = "./.data/log_mimir_20230715122058.txt"
     log = LogReader(filepath)
 
     filepath = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"
