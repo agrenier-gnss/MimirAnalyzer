@@ -16,25 +16,32 @@ from MapGrid import getMapGrid
 from CoordinateGrid import getCoordinateGrid
 from DifferenceGrid import getDifferenceGrid
 from GnssMeasurementGrid import getGnssMeasurementGrid
+from HealthGrid import getHealthGrid
+from ImuMeasurementGrid import getImuMeasurementGrid
 
 # panel serve main_dashboard.py --show --autoreload
 
 # =============================================================================
 # Data
 
-filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
-#filepath = "./.data/log_GNSS_20230414152332.txt"
+#filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
+#filepath = "./.data/log_old_20230414152332.txt"
+filepath = "./.data/log_mimir_20230715122058.txt"
 log = LogReader(filepath)
 
-filepath_ref = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"
-ref = PosReader(filepath_ref)
+healthEnabled = False
+referenceEnabled = True
+if referenceEnabled:
+    filepath_ref = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"
+    ref = PosReader(filepath_ref)
 
-_df = pd.concat([log.fix, ref.pos], ignore_index=True)
-log.fix = _df 
-print(log.fix)
+    _df = pd.concat([log.fix, ref.pos], ignore_index=True)
+    log.fix = _df 
 
 # =============================================================================
 # Tabs
+
+print(log.raw.loc[log.raw['prn'].isin(['G02-L1'])])
 
 sidebarlist = []
 # Map tab
@@ -50,6 +57,17 @@ difference_grid = getDifferenceGrid(log)
 gnssmeas_grid, gnssmeas_widgets = getGnssMeasurementGrid(log)
 sidebarlist.extend(gnssmeas_widgets)
 
+# IMU Measurement tab
+imu_grid, imu_widgets = getImuMeasurementGrid(log)
+sidebarlist.extend(imu_widgets)
+
+# Health tab
+if healthEnabled:
+    health_grid, health_widgets = getHealthGrid(log)
+    sidebarlist.extend(health_widgets)
+else:
+    health_grid = 'No health data in log.'
+
 # =============================================================================
 # Main
 
@@ -64,7 +82,9 @@ tabs = pn.Tabs(
     ("Map", map_grid), 
     ("Coordinates", coordinate_grid),
     ("Differences", difference_grid),
-    ("Measurements", gnssmeas_grid), dynamic=True)
+    ("Measurements", gnssmeas_grid),
+    ("IMU", imu_grid),
+    ("Health", health_grid), dynamic=True)
 
 template.main[:6, :12] = tabs
 template.servable()

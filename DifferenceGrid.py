@@ -12,16 +12,17 @@ def getDifferenceGrid(log : LogReader):
 
     reset_button = pn.widgets.Button(name='Reset', button_type='primary')
 
+    providers = list(set(log.fix["provider"]))
     providersCheckButtons_A = pn.widgets.RadioButtonGroup(
         name='Providers A', 
-        value='GPS', 
-        options=list(set(log.fix["provider"])),
+        value=providers[0], 
+        options=providers,
         button_type='primary')
     
     providersCheckButtons_B = pn.widgets.RadioButtonGroup(
         name='Providers B', 
-        value='FLP', 
-        options=list(set(log.fix["provider"])),
+        value=providers[0], 
+        options=providers,
         button_type='primary')
     
     # Bind widget callback

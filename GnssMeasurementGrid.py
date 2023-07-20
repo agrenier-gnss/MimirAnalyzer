@@ -3,7 +3,7 @@ from logparser import LogReader
 import panel as pn
 from bokeh.models.formatters import DatetimeTickFormatter
 import numpy as np
-import math
+from misc import  *
 
 # =============================================================================
 
@@ -19,6 +19,36 @@ import math
 # measurementsOptions.sort()
 
 # meas_select = pn.widgets.Select(name='Select', value='Cn0DbHz', options=measurementsOptions)
+
+GnssState_Str = {
+    0 : "UNKNOWN",
+    1 : "CODE_LOCK",
+    2 : "BIT_SYNC",
+    3 : "SUBFRAME_SYNC",        
+    4 : "TOW_DECODED",          
+    5 : "MSEC_AMBIGUOUS",       
+    6 : "SYMBOL_SYNC",          
+    7 : "GLO_STRING_SYNC",      
+    8 : "GLO_TOD_DECODED",      
+    9 : "BDS_D2_BIT_SYNC",      
+    10 : "BDS_D2_SUBFRAME_SYNC", 
+    11 : "GAL_E1BC_CODE_LOCK",   
+    12 : "GAL_E1C_2ND_CODE_LOCK",
+    13 : "GAL_E1B_PAGE_SYNC",    
+    14 : "SBAS_SYNC",            
+    15 : "TOW_KNOWN",            
+    16 : "GLO_TOD_KNOWN",       
+    17 : "S_2ND_CODE_LOCK"        
+}
+
+GnssStateADR_Str = {
+    0 : "UNKNOWN",             
+    1 : "VALID",               
+    2 : "RESET",               
+    3 : "CYCLE_SLIP",                 
+    4 : "HALF_CYCLE_RESOLVED",        
+    5 : "HALF_CYCLE_REPORTED"            
+}
 
 # =============================================================================
 
@@ -95,12 +125,12 @@ def selectMeasurement(reset_button, log, meas, gps_svid, glo_svid, gal_svid, bei
     # Display state
     if meas == "State":
         df = log.raw.loc[log.raw['prn'].isin(selected_prn), ['prn', 'datetime', 'timestamp', 'State']]
-        df[["State_split"]] = df.apply(lambda row: getSplitState(row['State'], bits=17), axis='columns', result_type='expand')
+        df[["State_split"]] = df.apply(lambda row: getSplitState(row['State'], bits=17, type='tracking'), axis='columns', result_type='expand')
         df = df.explode('State_split')
         df.rename(columns={"State_split":"measurement"}, inplace=True)
     elif meas == "AccumulatedDeltaRangeState":
         df = log.raw.loc[log.raw['prn'].isin(selected_prn), ['prn', 'datetime', 'timestamp', 'AccumulatedDeltaRangeState']]
-        df[["State_split"]] = df.apply(lambda row: getSplitState(row['AccumulatedDeltaRangeState'], bits=5), axis='columns', result_type='expand')
+        df[["State_split"]] = df.apply(lambda row: getSplitState(row['AccumulatedDeltaRangeState'], bits=5, type='phase'), axis='columns', result_type='expand')
         df = df.explode('State_split')
         df.rename(columns={"State_split":"measurement"}, inplace=True)
     else:
@@ -110,7 +140,7 @@ def selectMeasurement(reset_button, log, meas, gps_svid, glo_svid, gal_svid, bei
 
 # =============================================================================
 
-def getSplitState(state, bits=1):
+def getSplitState(state, bits=1, type='tracking'):
     
     # Split to bit array
     out = [1 if state & (1 << (bits-1-n)) else np.nan for n in range(bits)]
@@ -119,7 +149,10 @@ def getSplitState(state, bits=1):
     out = [out[i] * (bits-i) for i in range(bits)]
 
     # Clean list from nan
-    out = [x for x in out if str(x) != 'nan']
+    if type in 'tracking':
+        out = [GnssState_Str[x] for x in out if str(x) != 'nan']
+    elif type in 'phase':
+        out = [GnssStateADR_Str[x] for x in out if str(x) != 'nan']
 
     return {"State_split":out}
 

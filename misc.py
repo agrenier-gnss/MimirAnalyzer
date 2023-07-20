@@ -2,6 +2,8 @@
 from datetime import datetime
 import numpy as np
 
+from enum import Enum
+
 # =====================================================================================================================
 class GnssSystems:
     GPS = 1
@@ -57,29 +59,7 @@ pseudorangesDict = {}
 
 # =====================================================================================================================
 
-def getFixDictionnary(line):
-    try: 
-        mdict = {
-            "provider" : line[1],
-            "timestamp": float(line[8])/1e3,
-            'datetime' : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
-            "latitude" : float(line[2]),
-            "longitude": float(line[3]),
-            "altitude" : float(line[4]) if line[4] != "" else float("nan"),
-        }
-    except ValueError:
-        return
-
-    return mdict
-
-# =====================================================================================================================
-
-def getRawDictionnary(line):
-
-    try:
-        values = [float(value) if value != "" else float("nan") for value in line[1:-2]]
-        
-        keys = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
+keys_logger = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
                 "BiasUncertaintyNanos", "DriftNanosPerSecond","DriftUncertaintyNanosPerSecond",\
                 "HardwareClockDiscontinuityCount","Svid","TimeOffsetNanos","State","ReceivedSvTimeNanos", \
                 "ReceivedSvTimeUncertaintyNanos","Cn0DbHz","PseudorangeRateMetersPerSecond",\
@@ -87,27 +67,99 @@ def getRawDictionnary(line):
                 "AccumulatedDeltaRangeUncertaintyMeters","CarrierFrequencyHz","CarrierCycles","CarrierPhase",\
                 "CarrierPhaseUncertainty","MultipathIndicator","SnrInDb","ConstellationType","AgcDb", "BasebandCn0DbHz",\
                 "FullInterSignalBiasNanos","FullInterSignalBiasUncertaintyNanos","SatelliteInterSignalBiasNanos",\
-                "SatelliteInterSignalBiasUncertaintyNanos"]
-        
-        mdict = {}
-        for i in range(len(keys)):
-            if keys[i] in ["Svid", "ConstellationType", "State", "AccumulatedDeltaRangeState"]:
-                mdict[keys[i]] = int(values[i])
-            elif keys[i] == "timestamp":
-                mdict[keys[i]] = float(line[1])/1e3
-                mdict['datetime'] = np.datetime64(int(line[1]), 'ms')
-            else:
-                mdict[keys[i]] = values[i]
-            i += 1
-        
-        mdict["CodeType"] = line[-2]
-        mdict["ChipsetElapsedRealtimeNanos"] = float(line[-1])
-        mdict["prn"] = f"{getSystemLetter(mdict['ConstellationType'])}{mdict['Svid']:02d}-{getFrequencyLabel(mdict['CarrierFrequencyHz'])}"
-        mdict["Pseudorange"], mdict["PseudorangeVelocity"], mdict["PseudorangeAcceleration"] = getPseudoranges(mdict)
+                "SatelliteInterSignalBiasUncertaintyNanos", "CodeType", "ChipsetElapsedRealtimeNanos"]
 
+keys_mimir = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
+                "BiasUncertaintyNanos", "DriftNanosPerSecond","DriftUncertaintyNanosPerSecond",\
+                "HardwareClockDiscontinuityCount","Svid","TimeOffsetNanos","State","ReceivedSvTimeNanos", \
+                "ReceivedSvTimeUncertaintyNanos","Cn0DbHz","PseudorangeRateMetersPerSecond",\
+                "PseudorangeRateUncertaintyMetersPerSecond","AccumulatedDeltaRangeState","AccumulatedDeltaRangeMeters",\
+                "AccumulatedDeltaRangeUncertaintyMeters","CarrierFrequencyHz","CarrierCycles","CarrierPhase",\
+                "CarrierPhaseUncertainty","MultipathIndicator","SnrInDb","ConstellationType","AgcDb",\
+                "FullInterSignalBiasNanos","FullInterSignalBiasUncertaintyNanos","SatelliteInterSignalBiasNanos",\
+                "SatelliteInterSignalBiasUncertaintyNanos", "CodeType"]
+
+keys_old   = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
+                "BiasUncertaintyNanos", "DriftNanosPerSecond","DriftUncertaintyNanosPerSecond",\
+                "HardwareClockDiscontinuityCount","Svid","TimeOffsetNanos","State","ReceivedSvTimeNanos", \
+                "ReceivedSvTimeUncertaintyNanos","Cn0DbHz","PseudorangeRateMetersPerSecond",\
+                "PseudorangeRateUncertaintyMetersPerSecond","AccumulatedDeltaRangeState","AccumulatedDeltaRangeMeters",\
+                "AccumulatedDeltaRangeUncertaintyMeters","CarrierFrequencyHz","CarrierCycles","CarrierPhase",\
+                "CarrierPhaseUncertainty","MultipathIndicator","SnrInDb","ConstellationType","AgcDb"]
+
+# =====================================================================================================================
+
+def resetGlobal():
+    global GNSS_TIME_BIAS_NANOS
+    GNSS_TIME_BIAS_NANOS = np.nan
+    global pseudorangesDict
+    pseudorangesDict = {}
+
+# =====================================================================================================================
+
+
+def getFixDictionnary(line, mode='logger'):
+    try: 
+        if mode in ['logger', 'mimir']:
+            mdict = {
+                "provider" : line[1],
+                "timestamp": float(line[8])/1e3,
+                'datetime' : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+                "latitude" : float(line[2]),
+                "longitude": float(line[3]),
+                "altitude" : float(line[4]) if line[4] != "" else float("nan"),
+            }
+        elif mode in 'old':
+            mdict = {
+                "provider" : line[1],
+                "timestamp": float(line[7])/1e3,
+                'datetime' : np.datetime64(int(line[7]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+                "latitude" : float(line[2]),
+                "longitude": float(line[3]),
+                "altitude" : float(line[4]) if line[4] != "" else float("nan"),
+            }
 
     except ValueError:
+        return
 
+    return mdict
+
+# =====================================================================================================================
+
+def getRawDictionnary(line, mode='logger'):
+
+    if mode in 'mimir':
+        keys = keys_mimir
+    elif mode in 'old':
+        keys = keys_old
+    else:
+        keys = keys_logger
+
+    try:
+        mdict = {}
+        i = 1
+        for key in keys:
+            if line[i] == '':
+                mdict[key] = float("nan")
+            else:
+                match key:
+                    case "timestamp":
+                        mdict["timestamp"] = float(line[i])/1e3
+                        mdict["datetime"]  = np.datetime64(int(line[i]), 'ms')
+                    case "Svid" | "ConstellationType" | "State" | "AccumulatedDeltaRangeState":
+                        mdict[key] = int(line[i])
+                    case "CodeType":
+                        mdict["CodeType"] = line[i]
+                    case _:
+                        mdict[key] = float(line[i])
+            i += 1
+        
+        prn  = f"{getSystemLetter(mdict['ConstellationType'])}{mdict['Svid']:02d}"
+        freq = f"{getFrequencyLabel(mdict['CarrierFrequencyHz'])}"
+        mdict["prn"] = f"{prn}-{freq}"
+        mdict["Pseudorange"], mdict["PseudorangeVelocity"], mdict["PseudorangeAcceleration"] = getPseudoranges(mdict)
+
+    except ValueError as e:
         return
 
     return mdict
@@ -174,11 +226,13 @@ def getPseudoranges(raw : dict):
     state = raw["State"]
     if not (state & STATE_TOW_DECODED) \
         and not (state & STATE_TOW_KNOWN) \
-        and not (state & STATE_2ND_CODE_LOCK)\
-        and not (state & STATE_GAL_E1C_2ND_CODE_LOCK)\
         and not (state & STATE_GLO_TOD_DECODED)\
         and not (state & STATE_GLO_TOD_KNOWN):
         return pseudorange, pseudorangeVelocity, pseudorangeAcceleration
+    
+    # if not (state & STATE_2ND_CODE_LOCK)\
+    #     and not (state & STATE_GAL_E1C_2ND_CODE_LOCK):
+    #     return pseudorange, pseudorangeVelocity, pseudorangeAcceleration
 
     # Retrieve transmitted time 
     t_tx = raw["ReceivedSvTimeNanos"]
@@ -229,3 +283,68 @@ def getPseudoranges(raw : dict):
                                     'pseudorangeAcceleration':pseudorangeAcceleration}
             
     return pseudorange, pseudorangeVelocity, pseudorangeAcceleration
+
+
+# =====================================================================================================================
+
+def getHealthDictionnary(line):
+
+    try: 
+        mdict = {
+            "sensor"         : line[0],
+            "timestamp"      : float(line[1])/1e3,
+            "datetime"       : np.datetime64(int(line[1]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+            "elapsedRealtime": int(line[2]),
+            "accuracy"       : int(line[3])
+        }
+
+        i = 0
+        for value in line[4:12]:
+            mdict[f'value_{i}'] = float(value)
+            i += 1
+        
+    except ValueError:
+        return
+    
+    return mdict
+
+# =====================================================================================================================
+
+def getMotionDictionnary(line):
+
+    try: 
+        mdict = {
+            "sensor"         : line[0],
+            "timestamp"      : float(line[1])/1e3,
+            "datetime"       : np.datetime64(int(line[1]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+            "elapsedRealtime": int(line[2]),
+            "x"              : float(line[3]),
+            "y"              : float(line[4]),
+            "z"              : float(line[5])
+        }
+        
+    except ValueError:
+        return
+    
+    return mdict
+
+# =====================================================================================================================
+
+def getEnvironmentDict(line):
+
+    try: 
+        mdict = {
+            "sensor"         : line[0],
+            "timestamp"      : float(line[1])/1e3,
+            "datetime"       : np.datetime64(int(line[1]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+            "elapsedRealtime": int(line[2]),
+            "value"          : float(line[3])
+        }
+
+        
+    except ValueError:
+        return
+    
+    return mdict
+
+
