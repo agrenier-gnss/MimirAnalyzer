@@ -6,9 +6,9 @@ import misc
 
 class LogReader():
 
-    def __init__(self, filepath:str):
+    def __init__(self, filepath:str, specifiedTags=[]):
 
-        self.fix = []
+        self.specifiedTags = specifiedTags
 
         self.load(filepath)
 
@@ -36,6 +36,9 @@ class LogReader():
             i = 0
             for line in file:
                 line = file.readline().strip().split(",")
+
+                if self.specifiedTags and line[0] not in self.specifiedTags:
+                    continue
 
                 match line[0]:
                     case "Raw":
@@ -102,8 +105,6 @@ class LogReader():
         self.health = pd.DataFrame(health)
         self.motion = pd.DataFrame(motion)
         self.env = pd.DataFrame(env)
-
-        print(self.motion)
 
         return
     

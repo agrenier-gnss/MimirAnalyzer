@@ -29,7 +29,7 @@ from ImuMeasurementGrid import getImuMeasurementGrid
 filepath = "./.data/log_mimir_20230715122058.txt"
 log = LogReader(filepath)
 
-healthEnabled = False
+healthEnabled = True
 referenceEnabled = True
 if referenceEnabled:
     filepath_ref = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"

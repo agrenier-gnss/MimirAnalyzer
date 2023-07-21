@@ -44,6 +44,8 @@ def selectMeasurement(reset_button, log, meas, healthCheckButton):
     print(log.health)
     df = log.health.loc[log.health['sensor'].isin([healthCheckButton]), [meas, 'timestamp', 'datetime']]
     df.rename(columns={meas:"measurement"}, inplace=True)
+
+    
     
     return df
 
