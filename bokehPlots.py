@@ -3,6 +3,9 @@ from bokeh.layouts import column
 from bokeh.models import ColumnDataSource, RangeTool, BoxZoomTool, LinearAxis, Range1d, Span, Label
 from bokeh.plotting import figure
 
+import matplotlib.pyplot as plt
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+
 import numpy as np
 
 # =====================================================================================================================
@@ -45,8 +48,8 @@ def plotHist(ts, data_name):
 
     values = ts[data_name].values.tolist()
     values = [x for x in values if str(x) != 'nan']
-    
-    p = figure(height=300, width=600, y_range=(0, 0.4), background_fill_color="#efefef")
+
+    p = figure(height=300, width=600, y_range=(0, 0.4), x_range=(0, 100), background_fill_color="#efefef")
     p.quad(top=unity_density, bottom=0, left=edges[:-1], right=edges[1:],
             fill_color="skyblue", line_color="white")
     p.yaxis.axis_label = data_name
@@ -74,5 +77,62 @@ def plotHist(ts, data_name):
     
 
     return p
+
+# =====================================================================================================================
+
+def plotEN_pyplot(ts, lim):
+
+    #plt.style.use('seaborn-darkgrid')
+
+    minor_ticks = 0.1
+    major_ticks = 1
+
+    plt.figure(figsize=(8,8))
+    ts.plot(x='east', y='north', kind='scatter', s=6, zorder=3)
+    ax = plt.gca()
+    # ax.xaxis.set_major_locator(MultipleLocator(major_ticks))
+    # ax.xaxis.set_major_formatter('{x:.0f}')
+    # ax.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    # ax.yaxis.set_major_locator(MultipleLocator(major_ticks))
+    # ax.yaxis.set_major_formatter('{x:.0f}')
+    # ax.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    plt.axis('square')
+    plt.xlim(-lim, lim)
+    plt.ylim(-lim, lim)
+    plt.xlabel('East [m]')
+    plt.ylabel('North [m]')
+    plt.title("North / East")
+    plt.grid(zorder=0)
+    plt.show()
+    
+    return 
+
+# =====================================================================================================================
+
+def plot_hist_pyplot(ts, data_name, lim, title):
+
+    minor_ticks = 0.05
+    major_ticks = 0.2
+
+    ts[data_name] = ts[data_name].abs()
+    
+    bins = np.linspace(0, lim, 50)
+    hist, edges = np.histogram(ts[data_name], density=True, bins=bins)
+    unity_density = hist / hist.sum()
+
+    fig, ax1 = plt.subplots(figsize=(8,4))
+    ax2 = ax1.twinx()
+    ax1.bar(x=edges[:-1], height=unity_density, align='edge', width= 0.9 * (bins[1] - bins[0]), zorder=3)
+    ax2.stairs(values=unity_density.cumsum(), edges=edges[:], color='red', zorder=4)
+
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(MultipleLocator(major_ticks))
+    ax.xaxis.set_major_formatter('{x:.1f}')
+    ax.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    ax1.grid(zorder=0)
+    plt.title(title)
+    plt.show()
+    
+    return 
 
 # =====================================================================================================================
