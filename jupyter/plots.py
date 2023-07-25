@@ -42,14 +42,17 @@ def plotLineTimeRange(ts, data_name):
 def plotHist(ts, data_name):
     
     source = ColumnDataSource(ts)
-    bins = np.linspace(0, np.max(ts[data_name]), 50)
+
+    range_error = 50
+
+    bins = np.linspace(0, range_error, 51)
     hist, edges = np.histogram(ts[data_name], density=True, bins=bins)
     unity_density = hist / hist.sum()
 
     values = ts[data_name].values.tolist()
     values = [x for x in values if str(x) != 'nan']
 
-    p = figure(height=300, width=600, y_range=(0, 0.4), x_range=(0, 100), background_fill_color="#efefef")
+    p = figure(height=300, width=600, y_range=(0, 0.6), x_range=(0, range_error), background_fill_color="#efefef")
     p.quad(top=unity_density, bottom=0, left=edges[:-1], right=edges[1:],
             fill_color="skyblue", line_color="white")
     p.yaxis.axis_label = data_name
@@ -109,10 +112,10 @@ def plotEN_pyplot(ts, lim):
 
 # =====================================================================================================================
 
-def plot_hist_pyplot(ts, data_name, lim, title):
+def plot_hist_pyplot(ts, data_name, lim):
 
-    minor_ticks = 0.05
-    major_ticks = 0.2
+    minor_ticks = 2
+    major_ticks = 10
 
     ts[data_name] = ts[data_name].abs()
     
@@ -120,18 +123,26 @@ def plot_hist_pyplot(ts, data_name, lim, title):
     hist, edges = np.histogram(ts[data_name], density=True, bins=bins)
     unity_density = hist / hist.sum()
 
-    fig, ax1 = plt.subplots(figsize=(8,4))
+    fig, ax1 = plt.subplots(figsize=(6,4))
     ax2 = ax1.twinx()
-    ax1.bar(x=edges[:-1], height=unity_density, align='edge', width= 0.9 * (bins[1] - bins[0]), zorder=3)
-    ax2.stairs(values=unity_density.cumsum(), edges=edges[:], color='red', zorder=4)
+    ax1.bar(x=edges[:-1], height=unity_density, align='edge', width= 0.9 * (bins[1] - bins[0]), zorder=3, color='lightskyblue')
+    ax2.stairs(values=unity_density.cumsum(), edges=edges[:], color='navy', zorder=4)
+
+    # Percentile lines
+    values = ts[data_name].values.tolist()
+    values = [x for x in values if str(x) != 'nan']
+    p95 = np.percentile(values, 95)
+    ax2.axvline(x=p95, color='r')
+    ax2.text(p95+0.5, 0.5, f"95% - {p95:.3f}m", rotation=90, color='red', verticalalignment='center')
+    p99 = np.percentile(values, 99)
+    ax2.axvline(x=p99, color='r')
+    ax2.text(p99+0.5, 0.5, f"99% - {p99:.3f}m", rotation=90, color='red', verticalalignment='center')
 
     ax = plt.gca()
     ax.xaxis.set_major_locator(MultipleLocator(major_ticks))
     ax.xaxis.set_major_formatter('{x:.1f}')
     ax.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
     ax1.grid(zorder=0)
-    plt.title(title)
-    plt.show()
     
     return 
 
