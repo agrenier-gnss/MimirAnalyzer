@@ -13,7 +13,8 @@ from dashboard.grids import getImuMeasurementGrid, getHealthGrid
 
 filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
 #filepath = "./.data/log_old_20230414152332.txt"
-#filepath = "./.data/log_mimir_20230715122058.txt"
+#filepath = "./.data/log_mimir_20230715122058.txt"\
+filepath = '.data/static/gnss_log_GooglePixel7_2023_02_17_09_55_01.txt'
 log = LogReader(filepath)
 
 healthEnabled = False
