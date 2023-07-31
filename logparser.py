@@ -248,6 +248,8 @@ class LogReader():
             prn  = f"{self.getSystemLetter(mdict['ConstellationType'])}{mdict['Svid']:02d}"
             freq = f"{self.getFrequencyLabel(mdict['CarrierFrequencyHz'])}"
             mdict["prn"] = f"{prn}-{freq}"
+            mdict["system"] = f"{self.getSystemLetter(mdict['ConstellationType'])}" 
+            mdict["frequency"] = freq
             mdict["Pseudorange"], mdict["PseudorangeVelocity"], mdict["PseudorangeAcceleration"] = self.getPseudoranges(mdict)
 
         except ValueError as e:
