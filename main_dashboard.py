@@ -15,11 +15,14 @@ filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
 #filepath = "./.data/log_old_20230414152332.txt"
 #filepath = "./.data/log_mimir_20230715122058.txt"\
 #filepath = '.data/static/gnss_log_GooglePixel7_2023_02_17_09_55_01.txt'
+
+filepath = "./.data/dynamic_campus/log_mimir_GooglePixel7_20230801110405.txt"
+
 log = LogReader(filepath)
 
 healthEnabled = False
 imuEnabled = False
-referenceEnabled = True
+referenceEnabled = False
 if referenceEnabled:
     filepath_ref = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"
     ref = PosReader(filepath_ref)
@@ -29,6 +32,8 @@ if referenceEnabled:
 
 # =============================================================================
 # Tabs
+
+print(log.fix)
 
 sidebarlist = []
 # Map tab

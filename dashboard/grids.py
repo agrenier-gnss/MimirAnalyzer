@@ -358,7 +358,7 @@ def selectImuMeasurement(reset_button, log, meas, healthCheckButton):
 # =====================================================================================================================
 # MAP GRID
 
-color_map = {'GPS':'blue', 'FLP':'red', 'NLP':'green', 'REF':'purple'}
+color_map = {'GPS':'blue', 'gps':'blue', 'FLP':'red', 'NLP':'green', 'REF':'purple'}
 
 # -----------------------------------------------------------------------------
 
@@ -369,12 +369,12 @@ def getMapGrid(log : LogReader):
     m = folium.Map(location=[log.fix['latitude'][0],log.fix['longitude'][0]], zoom_start=16)
 
     for prov in providers:
+        trajectory = folium.FeatureGroup(name=prov).add_to(m)
         points = []
         df = log.fix.loc[log.fix['provider'].isin([prov])]
         for index, row in df.iterrows():
             points.append((row['latitude'], row['longitude']))
-
-        trajectory = folium.FeatureGroup(name=prov).add_to(m)
+            trajectory.add_child(folium.CircleMarker(location=points[-1], radius=1, color=color_map[prov]))
         trajectory.add_child(folium.PolyLine(locations=points, weight=3, color=color_map[prov]))
     folium.LayerControl().add_to(m)
 

@@ -193,7 +193,7 @@ class LogReader():
         try: 
             if mode in ['logger', 'mimir']:
                 mdict = {
-                    "provider" : line[1],
+                    "provider" : line[1].upper(),
                     "timestamp": float(line[8])/1e3,
                     'datetime' : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
                     "latitude" : float(line[2]),
@@ -202,7 +202,7 @@ class LogReader():
                 }
             elif mode in 'old':
                 mdict = {
-                    "provider" : line[1],
+                    "provider" : line[1].upper(),
                     "timestamp": float(line[7])/1e3,
                     'datetime' : np.datetime64(int(line[7]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
                     "latitude" : float(line[2]),
