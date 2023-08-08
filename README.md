@@ -1,3 +1,3 @@
 # MimirAnalyzer
 
-Companion desktop app the Mimir Android app.
+Companion desktop software for the Mimir Android app. 
