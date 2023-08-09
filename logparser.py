@@ -82,9 +82,10 @@ keys_old   = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "F
 
 class LogReader():
 
-    def __init__(self, filepath:str, specifiedTags=[]):
+    def __init__(self, filepath:str, specifiedTags=[], mode='logger'):
 
         self.specifiedTags = specifiedTags
+        self.mode = mode
 
         self.load(filepath)
 
@@ -105,12 +106,6 @@ class LogReader():
         motion = []
         env = []
 
-        mode = 'logger'
-        if "mimir" in filepath:
-            mode = 'mimir'
-        elif "old" in filepath:
-            mode = 'old'
-
         with open(filepath) as file:
             i = 0
             for line in file:
@@ -121,14 +116,14 @@ class LogReader():
 
                 match line[0]:
                     case "Raw":
-                        mdict = self.getRawDictionnary(line, mode)
+                        mdict = self.getRawDictionnary(line, self.mode)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'Raw'")
                         else:
                             raw.append(mdict)
                     
                     case "Fix":
-                        mdict = self.getFixDictionnary(line, mode)
+                        mdict = self.getFixDictionnary(line, self.mode)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'Fix'")
                         else:

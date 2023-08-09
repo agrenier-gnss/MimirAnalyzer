@@ -18,7 +18,9 @@ filepath     = "./example_data/log_mimir_GooglePixel7_20230801110405_trimmed.txt
 #filepath = '.data/static/gnss_log_GooglePixel7_2023_02_17_09_55_01.txt'
 #filepath = "./.data/dynamic_campus/log_mimir_GooglePixel7_20230801110405.txt"
 
-log = LogReader(filepath)
+filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Xiaomi_11T/log_Xiaomi11T_20230801111451.txt"
+
+log = LogReader(filepath, mode='mimir')
 
 referenceEnabled = False
 #filepath_ref = "./example_data/NMND18410025C_2023-04-14_13-03-45.pos"
@@ -33,8 +35,6 @@ imuEnabled = False
 
 # =============================================================================
 # Tabs
-
-print(log.fix)
 
 sidebarlist = []
 # Map tab

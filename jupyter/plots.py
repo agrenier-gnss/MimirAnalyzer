@@ -1,149 +1,349 @@
 
-from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, RangeTool, BoxZoomTool, LinearAxis, Range1d, Span, Label
-from bokeh.plotting import figure
-
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 import numpy as np
+import cartopy.crs as ccrs
+import cartopy.io.img_tiles as cimgt
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+import io
+from urllib.request import urlopen, Request
+from PIL import Image
 
-# =====================================================================================================================
+import misc
 
-def plotLineTimeRange(ts, data_name):
+plt.style.use('plot_style.mplstyle')
+        
+# ======================================================================================================================
+# Position plots
 
-    source = ColumnDataSource(ts)
+def plotENU(logs):
 
-    p = figure(height=300, width=1200,
-           x_axis_type="datetime", x_axis_location="above",
-           background_fill_color="#efefef", x_range=(ts.index[100], ts.index[1000]))
+    # Params
+    minor_ticks = 0.5
+    major_ticks = 2
+    minor_ticks_up = 1
+    major_ticks_up = 5
+    ylim_east = 5
+    ylim_north = ylim_east
+    ylim_up = 15
 
-    p.line('datetime', data_name, source=source)
-    p.yaxis.axis_label = data_name
+    # Init
+    fig, axs = plt.subplots(3, figsize=(8,6))
+    plt.suptitle('East / North / Up errors')
+    for log in logs:
+        df = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
+        df['east'].plot(ax=axs[0], label=log['device_name'])
+        df['north'].plot(ax=axs[1], label=log['device_name'])
+        df['up'].plot(ax=axs[2], label=log['device_name'])
+        
+    # East
+    axs[0].set_ylabel("East [m]")
+    axs[0].set_ylim(-ylim_east, ylim_east)
+    axs[0].yaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs[0].yaxis.set_major_formatter('{x:.0f}')
+    axs[0].yaxis.set_minor_locator(MultipleLocator(minor_ticks))
 
-    select = figure(title="Drag the middle and edges of the selection box to change the range above",
-                    height=130, width=1200, y_range=p.y_range,
-                    x_axis_type="datetime", y_axis_type=None, toolbar_location=None, background_fill_color="#efefef")
+    # East
+    axs[1].set_ylabel("North [m]")
+    axs[1].set_ylim(-ylim_north, ylim_north)
+    axs[1].yaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs[1].yaxis.set_major_formatter('{x:.0f}')
+    axs[1].yaxis.set_minor_locator(MultipleLocator(minor_ticks))
 
-    range_tool = RangeTool(x_range=p.x_range)
-    range_tool.overlay.fill_color = "navy"
-    range_tool.overlay.fill_alpha = 0.2
+    # Set ticks up
+    axs[2].set_ylabel("Up [m]")
+    axs[2].yaxis.set_major_locator(MultipleLocator(major_ticks_up))
+    axs[2].yaxis.set_major_formatter('{x:.0f}')
+    axs[2].yaxis.set_minor_locator(MultipleLocator(minor_ticks_up))
+    axs[2].set_ylim(-ylim_up, ylim_up)
+        
+    handles, labels = axs[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower left",
+            mode="expand", ncol=len(labels))
 
-    select.line('datetime', data_name, source=source)
-    select.ygrid.grid_line_color = None
-    select.add_tools(range_tool)
-    select.add_tools(BoxZoomTool(dimensions="width"))
-    select.toolbar.active_multi = 'auto'
+    fig.tight_layout(rect=[0, 0.03, 1, 1])
 
-    return column(p, select)
+# ----------------------------------------------------------------------------------------------------------------------
 
-# =====================================================================================================================
-
-def plotHist(ts, data_name):
+def plotEN(logs, lim, ticks):
     
-    source = ColumnDataSource(ts)
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-    range_error = 50
-
-    bins = np.linspace(0, range_error, 51)
-    hist, edges = np.histogram(ts[data_name], density=True, bins=bins)
-    unity_density = hist / hist.sum()
-
-    values = ts[data_name].values.tolist()
-    values = [x for x in values if str(x) != 'nan']
-
-    p = figure(height=300, width=600, y_range=(0, 0.6), x_range=(0, range_error), background_fill_color="#efefef")
-    p.quad(top=unity_density, bottom=0, left=edges[:-1], right=edges[1:],
-            fill_color="skyblue", line_color="white")
-    p.yaxis.axis_label = data_name
-
-    p95 = np.percentile(values, 95)
-    vline = Span(location=p95, dimension='height', line_color='red', line_width=1)
-    p.add_layout(vline)
-    my_label = Label(x=p95, y=(p.height-100), y_units='screen', text=f'95% - {p95:.3f}m', 
-                     text_color='red',text_font_style='italic', text_font_size='8pt')
-    p.add_layout(my_label)
-
-    p99 = np.percentile(values, 99)
-    vline = Span(location=p99, dimension='height', line_color='red', line_width=1)
-    p.add_layout(vline)
-    my_label = Label(x=p99, y=(p.height-50), y_units='screen', text=f'99% - {p99:.3f}m', 
-                     text_color='red',text_font_style='italic',text_font_size='8pt')
-    p.add_layout(my_label)
-
-
-    p.extra_y_ranges['cumsum'] = Range1d(0, 1.1)
-    p.line(edges[:-1], unity_density.cumsum(), color="navy", y_range_name="cumsum")
-
-    ax2 = LinearAxis(y_range_name="cumsum", axis_label="Cumulative probability")
-    p.add_layout(ax2, 'right')
+    fig, axs = plt.subplots(1, figsize=(6,6))
+    fig.suptitle('East/North errors')
+    i = 0
+    for log in logs:
+        df = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
+        df.plot(x='east', y='north', kind='scatter', label=log['device_name'], color=colors[i], s=6, zorder=3, ax=axs)
+        i+=1
     
-
-    return p
-
-# =====================================================================================================================
-
-def plotEN_pyplot(ts, lim):
-
-    #plt.style.use('seaborn-darkgrid')
-
-    minor_ticks = 0.1
-    major_ticks = 1
-
-    plt.figure(figsize=(8,8))
-    ts.plot(x='east', y='north', kind='scatter', s=6, zorder=3)
-    ax = plt.gca()
-    # ax.xaxis.set_major_locator(MultipleLocator(major_ticks))
-    # ax.xaxis.set_major_formatter('{x:.0f}')
-    # ax.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
-    # ax.yaxis.set_major_locator(MultipleLocator(major_ticks))
-    # ax.yaxis.set_major_formatter('{x:.0f}')
-    # ax.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    plt.grid(zorder=0)
     plt.axis('square')
     plt.xlim(-lim, lim)
     plt.ylim(-lim, lim)
     plt.xlabel('East [m]')
     plt.ylabel('North [m]')
-    plt.title("North / East")
-    plt.grid(zorder=0)
-    plt.show()
+        
+    fig.tight_layout()
+
+    minor_ticks = ticks[0]
+    major_ticks = ticks[1]
+
+    axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs.yaxis.set_major_formatter('{x:.0f}')
+    axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    axs.xaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs.xaxis.set_major_formatter('{x:.0f}')
+    axs.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotHistENU(logs):
+
+    lim = 5
+    nb_bins = 51
+
+    for log in logs:
+        fig, axs = plt.subplots(1, figsize=(6,4))
+        fig.suptitle(f"Histogram ENU errors ({log['device_name']})")
+        pos = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+
+        bins = np.linspace(-lim, lim, nb_bins)
+        
+        bottom = np.zeros(nb_bins-1)
+        for label in ['east', 'north', 'up']:
+            hist, edges = np.histogram(pos[label], density=True, bins=bins)
+            unity_density = hist / hist.sum()
+            axs.bar(x=edges[:-1], height=unity_density, align='edge', 
+                    width= 0.9 * (bins[1] - bins[0]), label=label.capitalize(), zorder=3, bottom=bottom)
+            bottom += unity_density
+
+        handles, labels = axs.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper right')
+        fig.tight_layout()
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotStatisticsENU(logs, mode='violin'):
+
+    for log in logs:
+        
+        minor_ticks = 0.2
+        major_ticks = 1
+        lim = 5
+
+        fig, axs = plt.subplots(1, figsize=(4,4))
+
+        fig.suptitle(f"Statistics of ENU errors ({log['device_name']})")
+        
+        pos = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+        data = [pos['east'], pos['north'], pos['up']]
+
+        if mode == 'violin':
+            axs.violinplot(data, showmeans=False, showmedians=True)
+        elif mode == 'box':
+            axs.boxplot(data, showmeans=True, showfliers=False)
+        
+        axs.set_xticks([y + 1 for y in range(len(data))], labels=['East', 'North', 'Up'])
+
+        axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+        axs.yaxis.set_major_formatter('{x:.0f}')
+        axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+
+        plt.ylim(-lim, lim)
+
+        handles, labels = axs.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper right')
+        fig.tight_layout()
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotMap(locations, extent, scale):
+    """
+    Taken from: https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy
+    Mapping New York City Open Street Map (OSM) with Cartopy
+    This code uses a spoofing algorithm to avoid bounceback from OSM servers
     
-    return 
+    """
 
-# =====================================================================================================================
+    def image_spoof(self, tile): # this function pretends not to be a Python script
+        url = self._image_url(tile) # get the url of the street map API
+        req = Request(url) # start request
+        req.add_header('User-agent','Anaconda 3') # add user agent to request
+        fh = urlopen(req) 
+        im_data = io.BytesIO(fh.read()) # get image
+        fh.close() # close url
+        img = Image.open(im_data) # open image with PIL
+        img = img.convert(self.desired_tile_form) # set image format
+        return img, self.tileextent(tile), 'lower' # reformat for cartopy
 
-def plot_hist_pyplot(ts, data_name, lim):
+    cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
+    osm_img = cimgt.OSM() # spoofed, downloaded street map
 
-    minor_ticks = 2
-    major_ticks = 10
+    fig = plt.figure(figsize=(8,8)) # open matplotlib figure
+    ax1 = plt.axes(projection=osm_img.crs) # project using coordinate reference system (CRS) of street map
+    ax1.set_extent(extent) # set extents
 
-    ts[data_name] = ts[data_name].abs()
+    ax1.add_image(osm_img, int(scale)) # add OSM with zoom specification
+
+    # Polylines
+    for loc in locations:
+        ax1.plot(loc['longitude'].to_list(), loc['latitude'].to_list(), color='blue', linewidth=2, transform=ccrs.Geodetic())
     
-    bins = np.linspace(0, lim, 50)
-    hist, edges = np.histogram(ts[data_name], density=True, bins=bins)
-    unity_density = hist / hist.sum()
+    # Grid
+    # gl = ax1.gridlines(draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
 
-    fig, ax1 = plt.subplots(figsize=(6,4))
-    ax2 = ax1.twinx()
-    ax1.bar(x=edges[:-1], height=unity_density, align='edge', width= 0.9 * (bins[1] - bins[0]), zorder=3, color='lightskyblue')
-    ax2.stairs(values=unity_density.cumsum(), edges=edges[:], color='navy', zorder=4)
+    # gl.top_labels = False
+    # gl.right_labels = False
 
-    # Percentile lines
-    values = ts[data_name].values.tolist()
-    values = [x for x in values if str(x) != 'nan']
-    p95 = np.percentile(values, 95)
-    ax2.axvline(x=p95, color='r')
-    ax2.text(p95+0.5, 0.5, f"95% - {p95:.3f}m", rotation=90, color='red', verticalalignment='center')
-    p99 = np.percentile(values, 99)
-    ax2.axvline(x=p99, color='r')
-    ax2.text(p99+0.5, 0.5, f"99% - {p99:.3f}m", rotation=90, color='red', verticalalignment='center')
+    ax1.set_xticks(np.linspace(extent[0],extent[1],7),crs=ccrs.PlateCarree()) # set longitude indicators
+    ax1.set_yticks(np.linspace(extent[2],extent[3],7)[1:],crs=ccrs.PlateCarree()) # set latitude indicators
+    lon_formatter = LongitudeFormatter(number_format='0.3f',degree_symbol='',dateline_direction_label=True) # format lons
+    lat_formatter = LatitudeFormatter(number_format='0.3f',degree_symbol='') # format lats
+    ax1.xaxis.set_major_formatter(lon_formatter) # set lons
+    ax1.yaxis.set_major_formatter(lat_formatter) # set lats
+    # ax1.xaxis.set_tick_params(labelsize=14)
+    # ax1.yaxis.set_tick_params(labelsize=14)
 
-    ax = plt.gca()
-    ax.xaxis.set_major_locator(MultipleLocator(major_ticks))
-    ax.xaxis.set_major_formatter('{x:.1f}')
-    ax.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
-    ax1.grid(zorder=0)
-    
-    return 
+    plt.grid(False)
 
-# =====================================================================================================================
+
+# ======================================================================================================================
+# Measurement plots
+
+def plotHistPerSystem(logs, systems, data_name, absolute=False):
+
+    minor_ticks = 0.1
+    major_ticks = 1
+    lim = 60
+    ylim = 0.6
+    nb_bins = 31
+    bins = np.linspace(0, lim, nb_bins)
+
+    for log in logs:
+        fig, axs = plt.subplots(1, figsize=(6,4))
+        fig.suptitle(f"Histogram pseudorange errors ({log['device_name']})")
+
+        sats = list(set(log['content'].raw["prn"]))
+        sats.sort()
+
+        # Find total absolute sum
+        _sats = [item for item in sats if item.startswith(systems)]
+        df = log['content'].raw.loc[log['content'].raw['prn'].isin(_sats), [data_name]]
+        hist, edges = np.histogram(df[data_name], density=False, bins=bins)
+        total_sum = hist.sum()
+
+        bottom = np.zeros(nb_bins-1)
+        for sys in systems:
+            _sats = [item for item in sats if item.startswith(sys)]
+            df = log['content'].raw.loc[log['content'].raw['prn'].isin(_sats), [data_name]]
+
+            if absolute:
+                df[data_name] = df[data_name].abs()
+                bins = np.linspace(0, lim, nb_bins)
+            else:
+                bins = np.linspace(-lim, lim, nb_bins)
+            hist, edges = np.histogram(df[data_name], density=False, bins=bins)
+            unity_density = hist / hist.sum() / len(systems)
+            axs.bar(x=edges[:-1], height=unity_density, align='center', 
+                    width= 0.9 * (bins[1] - bins[0]), label=sys, zorder=3, bottom=bottom)
+            bottom += unity_density
+        
+        # axs.xaxis.set_major_locator(MultipleLocator(major_ticks))
+        # axs.xaxis.set_major_formatter('{x:.0f}')
+        # axs.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
+
+        plt.ylim(0, ylim)
+
+        handles, labels = axs.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper right')
+        fig.tight_layout()
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# Plot statistics data in box
+def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ticks):
+
+    minor_ticks = ticks[0]
+    major_ticks = ticks[1]
+
+    for log in logs:
+
+        sats = list(set(log['content'].raw["prn"]))
+        sats.sort()
+        
+        data = []
+        labels = []
+        for sys in systems:
+            _sats = [item for item in sats if item.startswith(sys)]
+            if sys == 'R':
+                __sats = _sats
+                df = log['content'].raw.loc[log['content'].raw['prn'].isin(__sats), [data_name]]
+
+                # Filter if neeeded
+                # q = df[data_name].quantile(0.99)
+                # df[data_name] = df[df[data_name].abs() < q]
+
+                _data = df[data_name]
+                data.append(_data[~np.isnan(_data)])
+                labels.append(f"{misc.getSystemStr(sys)}")
+            else:
+                for freq in frequencies:
+                    __sats = [item for item in _sats if item.endswith(freq[-1])]
+                    df = log['content'].raw.loc[log['content'].raw['prn'].isin(__sats), [data_name]]
+
+                    # # Filter if neeeded
+                    # q = df[data_name].quantile(0.99)
+                    # df[data_name] = df[df[data_name].abs() < q]
+
+                    _data = df[data_name]
+                    _data = _data[~np.isnan(_data)].tolist()
+                    
+                    if len(_data) != 0:
+                        data.append(_data)
+                    else:
+                        data.append([float('nan'), float('nan')])
+                    labels.append(f"{misc.getSystemStr(sys)}-{freq}")
+        
+        fig, axs = plt.subplots(1, figsize=(8,5))
+        fig.suptitle(f"{log['device_name']}")
+        axs.boxplot(data, showmeans=True, showfliers=False)
+        axs.set_xticks([y + 1 for y in range(len(data))], labels=labels)
+        axs.set_ylabel(ylabel)
+
+        axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+        axs.yaxis.set_major_formatter('{x:.1f}')
+        axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+
+        plt.ylim(-lim, lim)
+        axs.set_axisbelow(True)
+        handles, labels = axs.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper right')
+        fig.tight_layout()
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# Plot measurement
+def plotMeasurement(log, data_name, sat):
+
+    minor_ticks = 0.2
+    major_ticks = 1
+    lim = 300
+
+    df = log['content'].raw.loc[log['content'].raw['prn'].isin(sat), ['datetime', 'prn', data_name]]
+
+    fig, axs = plt.subplots(1, figsize=(6,5))
+    fig.suptitle(f"{data_name} errors ({log['device_name']})")
+
+    df.groupby('prn')[data_name].plot(x='datatime', y=data_name, ax=axs)
+
+    # axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+    # axs.yaxis.set_major_formatter('{x:.0f}')
+    # axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+
+    #plt.ylim(-lim, lim)
+
+    handles, labels = axs.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper right')
+    fig.tight_layout()
