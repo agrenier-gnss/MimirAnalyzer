@@ -11,14 +11,16 @@ from dashboard.grids import getImuMeasurementGrid, getHealthGrid
 # =============================================================================
 # Data
 
-filepath     = "./example_data/log_mimir_GooglePixel7_20230801110405_trimmed.txt"
+#filepath     = "./example_data/log_mimir_GooglePixel7_20230801110405_trimmed.txt"
 
 #filepath = "./.data/log_old_20230414152332.txt"
 #filepath = "./.data/log_mimir_20230715122058.txt"\
-#filepath = '.data/static/gnss_log_GooglePixel7_2023_02_17_09_55_01.txt'
+filepath = '.data/static/gnss_log_GooglePixel7_2023_02_17_09_55_01.txt'
 #filepath = "./.data/dynamic_campus/log_mimir_GooglePixel7_20230801110405.txt"
 
-filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Xiaomi_11T/log_Xiaomi11T_20230801111451.txt"
+# filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Xiaomi_11T/log_Xiaomi11T_20230801111451.txt"
+# filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Google_Pixel7/log_GooglePixel7_20230801110405.txt"
+# filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Google_PixelWatch/log_GooglePixelWatch_20230801110404.txt"
 
 log = LogReader(filepath, mode='mimir')
 

@@ -212,14 +212,14 @@ def plotMap(locations, extent, scale):
 # ======================================================================================================================
 # Measurement plots
 
-def plotHistPerSystem(logs, systems, data_name, absolute=False):
+def plotHistPerSystem(logs, systems, data_name, ticks, lim, absolute=False):
 
-    minor_ticks = 0.1
-    major_ticks = 1
-    lim = 60
-    ylim = 0.6
+    minor_ticks = ticks[0]
+    major_ticks = ticks[1]
+    xlim = lim[0]
+    ylim = lim[1]
     nb_bins = 31
-    bins = np.linspace(0, lim, nb_bins)
+    bins = np.linspace(0, xlim, nb_bins)
 
     for log in logs:
         fig, axs = plt.subplots(1, figsize=(6,4))
@@ -241,18 +241,18 @@ def plotHistPerSystem(logs, systems, data_name, absolute=False):
 
             if absolute:
                 df[data_name] = df[data_name].abs()
-                bins = np.linspace(0, lim, nb_bins)
+                bins = np.linspace(0, xlim, nb_bins)
             else:
-                bins = np.linspace(-lim, lim, nb_bins)
+                bins = np.linspace(-xlim, xlim, nb_bins)
             hist, edges = np.histogram(df[data_name], density=False, bins=bins)
             unity_density = hist / hist.sum() / len(systems)
             axs.bar(x=edges[:-1], height=unity_density, align='center', 
                     width= 0.9 * (bins[1] - bins[0]), label=sys, zorder=3, bottom=bottom)
             bottom += unity_density
         
-        # axs.xaxis.set_major_locator(MultipleLocator(major_ticks))
-        # axs.xaxis.set_major_formatter('{x:.0f}')
-        # axs.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
+        axs.xaxis.set_major_locator(MultipleLocator(major_ticks))
+        axs.xaxis.set_major_formatter('{x:.0f}')
+        axs.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
 
         plt.ylim(0, ylim)
 

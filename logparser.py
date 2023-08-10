@@ -180,6 +180,21 @@ class LogReader():
         self.motion = pd.DataFrame(motion)
         self.env = pd.DataFrame(env)
 
+        # Compute some additional entries
+        self.raw = self.raw.sort_values(by=['prn', 'datetime'])
+        dt = self.raw.groupby('prn')['datetime'].diff().dt.seconds.values
+
+        doppler = self.raw.groupby('prn')['PseudorangeRateMetersPerSecond'].diff().div(dt, axis=0,)
+        self.raw['DopplerError'] = doppler
+        
+        phases = self.raw.groupby('prn')['AccumulatedDeltaRangeMeters'].diff().div(dt, axis=0,)
+        self.raw['PhaseVelocity'] = phases
+        self.raw['PhaseError'] = phases.diff().div(dt, axis=0,)
+
+        self.raw['PhaseMinusDoppler'] = self.raw['PhaseVelocity'] - self.raw['PseudorangeRateMetersPerSecond']
+
+        self.raw.replace([np.inf, -np.inf], np.nan, inplace=True)
+
         return
     
     # -----------------------------------------------------------------------------------------------------------------
