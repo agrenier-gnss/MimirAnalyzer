@@ -34,7 +34,7 @@ def plotENU(logs):
     fig, axs = plt.subplots(3, figsize=(8,6))
     plt.suptitle('East / North / Up errors')
     for log in logs:
-        df = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
+        df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
         df['east'].plot(ax=axs[0], label=log['device_name'])
         df['north'].plot(ax=axs[1], label=log['device_name'])
         df['up'].plot(ax=axs[2], label=log['device_name'])
@@ -76,8 +76,8 @@ def plotEN(logs, lim, ticks):
     fig.suptitle('East/North errors')
     i = 0
     for log in logs:
-        df = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
-        df.plot(x='east', y='north', kind='scatter', label=log['device_name'], color=colors[i], s=6, zorder=3, ax=axs)
+        df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
+        df.plot(x='east', y='north', kind='scatter', label=log.device, color=colors[i], s=6, zorder=3, ax=axs)
         i+=1
     
     plt.grid(zorder=0)
@@ -109,7 +109,7 @@ def plotHistENU(logs):
     for log in logs:
         fig, axs = plt.subplots(1, figsize=(6,4))
         fig.suptitle(f"Histogram ENU errors ({log['device_name']})")
-        pos = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+        pos = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
 
         bins = np.linspace(-lim, lim, nb_bins)
         
@@ -139,7 +139,7 @@ def plotStatisticsENU(logs, mode='violin'):
 
         fig.suptitle(f"Statistics of ENU errors ({log['device_name']})")
         
-        pos = log['content'].fix.loc[log['content'].fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+        pos = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
         data = [pos['east'], pos['north'], pos['up']]
 
         if mode == 'violin':
@@ -229,19 +229,19 @@ def plotHistPerSystem(logs, systems, data_name, ticks, lim, absolute=False):
         fig, axs = plt.subplots(1, figsize=(6,4))
         fig.suptitle(f"Histogram pseudorange errors ({log['device_name']})")
 
-        sats = list(set(log['content'].raw["prn"]))
+        sats = list(set(log.raw["prn"]))
         sats.sort()
 
         # Find total absolute sum
         _sats = [item for item in sats if item.startswith(systems)]
-        df = log['content'].raw.loc[log['content'].raw['prn'].isin(_sats), [data_name]]
+        df = log.raw.loc[log.raw['prn'].isin(_sats), [data_name]]
         hist, edges = np.histogram(df[data_name], density=False, bins=bins)
         total_sum = hist.sum()
 
         bottom = np.zeros(nb_bins-1)
         for sys in systems:
             _sats = [item for item in sats if item.startswith(sys)]
-            df = log['content'].raw.loc[log['content'].raw['prn'].isin(_sats), [data_name]]
+            df = log.raw.loc[log.raw['prn'].isin(_sats), [data_name]]
 
             if absolute:
                 df[data_name] = df[data_name].abs()
@@ -274,7 +274,7 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
 
     for log in logs:
 
-        sats = list(set(log['content'].raw["prn"]))
+        sats = list(set(log.raw["prn"]))
         sats.sort()
         
         data = []
@@ -283,7 +283,7 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
             _sats = [item for item in sats if item.startswith(sys)]
             if sys == 'R':
                 __sats = _sats
-                df = log['content'].raw.loc[log['content'].raw['prn'].isin(__sats), [data_name]]
+                df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
 
                 # Filter if neeeded
                 # q = df[data_name].quantile(0.99)
@@ -295,7 +295,7 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
             else:
                 for freq in frequencies:
                     __sats = [item for item in _sats if item.endswith(freq[-1])]
-                    df = log['content'].raw.loc[log['content'].raw['prn'].isin(__sats), [data_name]]
+                    df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
 
                     # # Filter if neeeded
                     # q = df[data_name].quantile(0.99)
@@ -337,7 +337,7 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
 
     for log in logs:
 
-        sats = list(set(log['content'].raw["prn"]))
+        sats = list(set(log.raw["prn"]))
         sats.sort()
         
         labels = []
@@ -347,7 +347,7 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
         _sats = [item for item in sats if item.startswith(systems)]
         _sats = [item for item in _sats if item.endswith(tuple([freq[-1] for freq in frequencies]))]
         
-        df = log['content'].raw.loc[log['content'].raw['prn'].isin(_sats), ['prn', 'system', 'frequency', data_name]]
+        df = log.raw.loc[log.raw['prn'].isin(_sats), ['prn', 'system', 'frequency', data_name]]
         
         # Filter if neeeded
         q = df[data_name].quantile(percentile)
@@ -401,12 +401,12 @@ def plotMeasurement(log, data_name, sat):
     major_ticks = 1
     lim = 300
 
-    df = log['content'].raw.loc[log['content'].raw['prn'].isin(sat), ['datetime', 'prn', data_name]]
+    df = log.raw.loc[log.raw['prn'].isin(sat), ['datetime', 'prn', data_name]]
 
     fig, axs = plt.subplots(1, figsize=(6,5))
     fig.suptitle(f"{data_name} errors ({log['device_name']})")
 
-    df.groupby('prn')[data_name].plot(x='datatime', y=data_name, ax=axs)
+    df.groupby('prn')[data_name].plot(x='datetime', y=data_name, ax=axs)
 
     # axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
     # axs.yaxis.set_major_formatter('{x:.0f}')

@@ -52,7 +52,7 @@ NANOSECONDS_IN_WEEK = int(SECONDS_IN_WEEK * 1e9)
 NANOSECONDS_IN_DAY = int(SECONDS_IN_DAY * 1e9)
 NANOSECONDS_IN_100MS = int(1e8)
 
-keys_logger = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
+keys_logger = ["Raw", "timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
                 "BiasUncertaintyNanos", "DriftNanosPerSecond","DriftUncertaintyNanosPerSecond",\
                 "HardwareClockDiscontinuityCount","Svid","TimeOffsetNanos","State","ReceivedSvTimeNanos", \
                 "ReceivedSvTimeUncertaintyNanos","Cn0DbHz","PseudorangeRateMetersPerSecond",\
@@ -62,17 +62,17 @@ keys_logger = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "
                 "FullInterSignalBiasNanos","FullInterSignalBiasUncertaintyNanos","SatelliteInterSignalBiasNanos",\
                 "SatelliteInterSignalBiasUncertaintyNanos", "CodeType", "ChipsetElapsedRealtimeNanos"]
 
-keys_mimir = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
+keys_mimir = ["Raw", "timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
                 "BiasUncertaintyNanos", "DriftNanosPerSecond","DriftUncertaintyNanosPerSecond",\
                 "HardwareClockDiscontinuityCount","Svid","TimeOffsetNanos","State","ReceivedSvTimeNanos", \
                 "ReceivedSvTimeUncertaintyNanos","Cn0DbHz","PseudorangeRateMetersPerSecond",\
                 "PseudorangeRateUncertaintyMetersPerSecond","AccumulatedDeltaRangeState","AccumulatedDeltaRangeMeters",\
                 "AccumulatedDeltaRangeUncertaintyMeters","CarrierFrequencyHz","CarrierCycles","CarrierPhase",\
-                "CarrierPhaseUncertainty","MultipathIndicator","SnrInDb","ConstellationType","AgcDb",\
+                "CarrierPhaseUncertainty","MultipathIndicator","SnrInDb","ConstellationType","AgcDb", "BasebandCn0DbHz",\
                 "FullInterSignalBiasNanos","FullInterSignalBiasUncertaintyNanos","SatelliteInterSignalBiasNanos",\
                 "SatelliteInterSignalBiasUncertaintyNanos", "CodeType"]
 
-keys_old   = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
+keys_old   = ["Raw", "timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "FullBiasNanos", "BiasNanos", \
                 "BiasUncertaintyNanos", "DriftNanosPerSecond","DriftUncertaintyNanosPerSecond",\
                 "HardwareClockDiscontinuityCount","Svid","TimeOffsetNanos","State","ReceivedSvTimeNanos", \
                 "ReceivedSvTimeUncertaintyNanos","Cn0DbHz","PseudorangeRateMetersPerSecond",\
@@ -85,8 +85,9 @@ keys_old   = ["timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNanos", "F
 
 class LogReader():
 
-    def __init__(self, filepath:str, specifiedTags=[], mode='logger'):
+    def __init__(self, device, filepath:str, specifiedTags=[], mode='logger'):
 
+        self.device = device
         self.specifiedTags = specifiedTags
         self.mode = mode
 
@@ -241,12 +242,14 @@ class LogReader():
 
         try:
             mdict = {}
-            i = 1
+            i = 0
             for key in keys:
                 if line[i] == '':
                     mdict[key] = float("nan")
                 else:
                     match key:
+                        case "Raw":
+                            pass
                         case "timestamp":
                             mdict["timestamp"] = float(line[i])/1e3
                             mdict["datetime"]  = np.datetime64(int(line[i]), 'ms')
