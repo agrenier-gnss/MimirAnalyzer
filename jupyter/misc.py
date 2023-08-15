@@ -24,6 +24,12 @@ def getSystemStr(letter):
             return "GLONASS"
         case 'C':
             return "BeiDou"
+        case 'I': 
+            return "IRNSS"
+        case 'J':
+            return "QZSS"
+        case 'S':
+            return "SBAS"
 
 # ======================================================================================================================
 # Coordinate conversions

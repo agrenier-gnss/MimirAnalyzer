@@ -5,10 +5,13 @@ import pandas as pd
 # =====================================================================================================================
 
 class GnssSystems:
-    GPS = 1
-    GLONASS = 3
-    BEIDOU = 5
-    GALILEO = 6
+    GPS      = 1
+    SBAS     = 2
+    GLONASS  = 3
+    QZSS     = 4
+    BEIDOU   = 5
+    GALILEO  = 6
+    IRNSS    = 7
 
 STATE_UNKNOWN               = int(0x00000000) # 0
 STATE_CODE_LOCK             = int(0x00000001) # 1
@@ -335,12 +338,18 @@ class LogReader():
         match system:
             case GnssSystems.GPS:
                 return 'G'
+            case GnssSystems.SBAS:
+                return 'S'
             case GnssSystems.GLONASS:
                 return 'R'
+            case GnssSystems.QZSS:
+                return 'J'
             case GnssSystems.BEIDOU:
                 return 'C'
             case GnssSystems.GALILEO:
                 return 'E'
+            case GnssSystems.IRNSS:
+                return 'I'
             case _:
                 return 'U'
             

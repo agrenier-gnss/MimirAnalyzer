@@ -10,6 +10,8 @@ import io
 from urllib.request import urlopen, Request
 from PIL import Image
 
+import seaborn as sns
+
 import misc
 
 plt.style.use('plot_style.mplstyle')
@@ -188,8 +190,9 @@ def plotMap(locations, extent, scale):
     ax1.add_image(osm_img, int(scale)) # add OSM with zoom specification
 
     # Polylines
-    for loc in locations:
-        ax1.plot(loc['longitude'].to_list(), loc['latitude'].to_list(), color='blue', linewidth=2, transform=ccrs.Geodetic())
+    for label, loc in locations.items():
+        ax1.plot(loc['longitude'].to_list(), loc['latitude'].to_list(),
+                 linewidth=2, transform=ccrs.Geodetic(), label=label)
     
     # Grid
     # gl = ax1.gridlines(draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
@@ -206,6 +209,7 @@ def plotMap(locations, extent, scale):
     # ax1.xaxis.set_tick_params(labelsize=14)
     # ax1.yaxis.set_tick_params(labelsize=14)
 
+    plt.legend()
     plt.grid(False)
 
 
@@ -320,6 +324,72 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
         axs.set_axisbelow(True)
         handles, labels = axs.get_legend_handles_labels()
         fig.legend(handles, labels, loc='upper right')
+        fig.tight_layout()
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# Plot statistics data in violin
+def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim, ticks):
+
+    minor_ticks = ticks[0]
+    major_ticks = ticks[1]
+    percentile = 0.999
+
+    for log in logs:
+
+        sats = list(set(log['content'].raw["prn"]))
+        sats.sort()
+        
+        labels = []
+        for sys in systems:
+            labels.append(f"{misc.getSystemStr(sys)}")
+
+        _sats = [item for item in sats if item.startswith(systems)]
+        _sats = [item for item in _sats if item.endswith(tuple([freq[-1] for freq in frequencies]))]
+        
+        df = log['content'].raw.loc[log['content'].raw['prn'].isin(_sats), ['prn', 'system', 'frequency', data_name]]
+        
+        # Filter if neeeded
+        q = df[data_name].quantile(percentile)
+        df = df[df[data_name].abs() < q]
+
+        df.reset_index(drop=True, inplace=True)
+
+        # Correction for mono-frequencies
+        for sys in systems:
+            _frequencies = list(set(df.loc[df['system'].isin([sys])]['frequency']))
+            new_row = {'system':f'{sys}', 'frequency':'L1', data_name:float('nan')}
+            
+            if 'L1' not in _frequencies:
+                new_row = [f'{sys}00-L1', f'{sys}', 'L1', float('nan')]
+                df.loc[len(df.index)] = new_row
+                df.loc[len(df.index)] = new_row
+            elif 'L5' not in _frequencies:
+                new_row = [f'{sys}00-L5', f'{sys}', 'L5', float('nan')]
+                df.loc[len(df.index)] = new_row
+                df.loc[len(df.index)] = new_row
+        
+        fig, axs = plt.subplots(1, figsize=(6,5))
+        fig.suptitle(f"{log['device_name']}")
+
+        sns.violinplot(ax=axs, data=df, x='system', y=data_name, hue='frequency', 
+                       order=systems, hue_order=frequencies, legend=False,
+                       split=True, orient='v', palette=['#27aeef', '#ef9b20'] , zorder=3)
+        plt.setp(axs.collections, alpha=.7)
+
+        axs.set_xticks([y for y in range(len(labels))], labels=labels)
+        axs.set_xlabel('')
+        axs.set_ylabel(ylabel)
+        axs.legend(handles=axs.legend_.legend_handles, labels=frequencies)
+
+        axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+        axs.yaxis.set_major_formatter('{x:.0f}')
+        axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+
+        plt.ylim(0, lim)
+        axs.set_axisbelow(True)
+        # handles, labels = axs.get_legend_handles_labels()
+        # fig.legend(handles, labels=frequencies)
         fig.tight_layout()
 
 # ----------------------------------------------------------------------------------------------------------------------
