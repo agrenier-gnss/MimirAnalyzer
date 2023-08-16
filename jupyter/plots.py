@@ -9,6 +9,7 @@ from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 import io
 from urllib.request import urlopen, Request
 from PIL import Image
+import pandas as pd
 
 import seaborn as sns
 
@@ -19,39 +20,42 @@ plt.style.use('plot_style.mplstyle')
 # ======================================================================================================================
 # Position plots
 
-def plotENU(logs):
+def plotENU(logs, lim, ticks):
 
     # Params
-    minor_ticks = 0.5
-    major_ticks = 2
-    minor_ticks_up = 1
-    major_ticks_up = 5
-    ylim_east = 5
-    ylim_north = ylim_east
-    ylim_up = 15
+    minor_ticks_east = ticks[0]
+    major_ticks_east = ticks[1]
+    minor_ticks_north = ticks[2]
+    major_ticks_north = ticks[3]
+    minor_ticks_up = ticks[4]
+    major_ticks_up = ticks[5]
+    ylim_east = lim[0]
+    ylim_north = lim[1]
+    ylim_up = lim[2]
 
     # Init
     fig, axs = plt.subplots(3, figsize=(8,6))
     plt.suptitle('East / North / Up errors')
     for log in logs:
-        df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
-        df['east'].plot(ax=axs[0], label=log['device_name'])
-        df['north'].plot(ax=axs[1], label=log['device_name'])
-        df['up'].plot(ax=axs[2], label=log['device_name'])
+        df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+        df.index = [idx - df.index[0] for idx in df.index]
+        axs[0].plot(df['east'], label=f"{log.manufacturer} {log.device}")
+        axs[1].plot(df['north'], label=f"{log.manufacturer} {log.device}")
+        axs[2].plot(df['up'], label=f"{log.manufacturer} {log.device}")
         
     # East
     axs[0].set_ylabel("East [m]")
     axs[0].set_ylim(-ylim_east, ylim_east)
-    axs[0].yaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs[0].yaxis.set_major_locator(MultipleLocator(major_ticks_east))
     axs[0].yaxis.set_major_formatter('{x:.0f}')
-    axs[0].yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    axs[0].yaxis.set_minor_locator(MultipleLocator(minor_ticks_east))
 
     # East
     axs[1].set_ylabel("North [m]")
     axs[1].set_ylim(-ylim_north, ylim_north)
-    axs[1].yaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs[1].yaxis.set_major_locator(MultipleLocator(major_ticks_north))
     axs[1].yaxis.set_major_formatter('{x:.0f}')
-    axs[1].yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    axs[1].yaxis.set_minor_locator(MultipleLocator(minor_ticks_north))
 
     # Set ticks up
     axs[2].set_ylabel("Up [m]")
@@ -76,8 +80,9 @@ def plotEN(logs, lim, ticks):
     fig.suptitle('East/North errors')
     i = 0
     for log in logs:
-        df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["datetime", "east", "north", "up"]]
-        df.plot(x='east', y='north', kind='scatter', label=log.device, color=colors[i], s=6, zorder=3, ax=axs)
+        df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+        df.plot(x='east', y='north', kind='scatter', label=f"{log.manufacturer} {log.device}",
+                color=colors[i], s=6, zorder=3, ax=axs)
         i+=1
     
     plt.grid(zorder=0)
@@ -108,7 +113,7 @@ def plotHistENU(logs):
 
     for log in logs:
         fig, axs = plt.subplots(1, figsize=(6,4))
-        fig.suptitle(f"Histogram ENU errors ({log['device_name']})")
+        fig.suptitle(f"Histogram ENU errors ({log.manufacturer} {log.device})")
         pos = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
 
         bins = np.linspace(-lim, lim, nb_bins)
@@ -127,17 +132,16 @@ def plotHistENU(logs):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotStatisticsENU(logs, mode='violin'):
+def plotStatisticsENU(logs, lim, ticks, mode='violin'):
 
     for log in logs:
         
-        minor_ticks = 0.2
-        major_ticks = 1
-        lim = 5
+        minor_ticks = ticks[0]
+        major_ticks = ticks[1]
 
         fig, axs = plt.subplots(1, figsize=(4,4))
 
-        fig.suptitle(f"Statistics of ENU errors ({log['device_name']})")
+        axs.set_title(f"{log.manufacturer} {log.device}")
         
         pos = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
         data = [pos['east'], pos['north'], pos['up']]
@@ -153,10 +157,11 @@ def plotStatisticsENU(logs, mode='violin'):
         axs.yaxis.set_major_formatter('{x:.0f}')
         axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
 
+        axs.set_ylabel("Error [m]")
+
         plt.ylim(-lim, lim)
 
         handles, labels = axs.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='upper right')
         fig.tight_layout()
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -227,7 +232,7 @@ def plotHistPerSystem(logs, systems, data_name, ticks, lim, absolute=False):
 
     for log in logs:
         fig, axs = plt.subplots(1, figsize=(6,4))
-        fig.suptitle(f"Histogram pseudorange errors ({log['device_name']})")
+        fig.suptitle(f"Histogram pseudorange errors ({log.manufacturer} {log.device})")
 
         sats = list(set(log.raw["prn"]))
         sats.sort()
@@ -311,7 +316,7 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
                     labels.append(f"{misc.getSystemStr(sys)}-{freq}")
         
         fig, axs = plt.subplots(1, figsize=(8,5))
-        fig.suptitle(f"{log['device_name']}")
+        fig.suptitle(f"{log.manufacturer} {log.device}")
         axs.boxplot(data, showmeans=True, showfliers=False)
         axs.set_xticks([y + 1 for y in range(len(data))], labels=labels)
         axs.set_ylabel(ylabel)
@@ -370,7 +375,7 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
                 df.loc[len(df.index)] = new_row
         
         fig, axs = plt.subplots(1, figsize=(6,5))
-        fig.suptitle(f"{log['device_name']}")
+        fig.suptitle(f"{log.manufacturer} {log.device}")
 
         sns.violinplot(ax=axs, data=df, x='system', y=data_name, hue='frequency', 
                        order=systems, hue_order=frequencies, legend=False,
@@ -404,7 +409,7 @@ def plotMeasurement(log, data_name, sat):
     df = log.raw.loc[log.raw['prn'].isin(sat), ['datetime', 'prn', data_name]]
 
     fig, axs = plt.subplots(1, figsize=(6,5))
-    fig.suptitle(f"{data_name} errors ({log['device_name']})")
+    fig.suptitle(f"{data_name} errors ({log.manufacturer} {log.device})")
 
     df.groupby('prn')[data_name].plot(x='datetime', y=data_name, ax=axs)
 

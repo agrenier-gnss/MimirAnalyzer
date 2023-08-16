@@ -85,8 +85,9 @@ keys_old   = ["Raw", "timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNan
 
 class LogReader():
 
-    def __init__(self, device, filepath:str, specifiedTags=[], mode='logger'):
-
+    def __init__(self, manufacturer, device, filepath:str, specifiedTags=[], mode='logger'):
+        
+        self.manufacturer = manufacturer
         self.device = device
         self.specifiedTags = specifiedTags
         self.mode = mode
@@ -179,25 +180,27 @@ class LogReader():
         
         # Convert to dataframes
         self.fix = pd.DataFrame(fix)
+        self.fix.set_index('datetime', inplace=True)
         self.raw = pd.DataFrame(raw)
+        self.raw.set_index('datetime', inplace=True)
         self.health = pd.DataFrame(health)
         self.motion = pd.DataFrame(motion)
         self.env = pd.DataFrame(env)
 
         # Compute some additional entries
-        self.raw = self.raw.sort_values(by=['prn', 'datetime'])
-        dt = self.raw.groupby('prn')['datetime'].diff().dt.seconds.values
+        #self.raw = self.raw.sort_values(by=['prn', 'TimeNanos'])
+        dt = self.raw.groupby('prn')['TimeNanos'].diff().values * 1e-9
 
         doppler = self.raw.groupby('prn')['PseudorangeRateMetersPerSecond'].diff().div(dt, axis=0,)
         self.raw['DopplerError'] = doppler
         
         phases = self.raw.groupby('prn')['AccumulatedDeltaRangeMeters'].diff().div(dt, axis=0,)
         self.raw['PhaseVelocity'] = phases
-        self.raw['PhaseError'] = phases.diff().div(dt, axis=0,)
+        self.raw['PhaseError'] = self.raw.groupby('prn')['PhaseVelocity'].diff().div(dt, axis=0,)
 
         self.raw['PhaseMinusDoppler'] = self.raw['PhaseVelocity'] - self.raw['PseudorangeRateMetersPerSecond']
 
-        self.raw.replace([np.inf, -np.inf], np.nan, inplace=True)
+        #self.raw.replace([np.inf, -np.inf], np.nan, inplace=True)
 
         return
     

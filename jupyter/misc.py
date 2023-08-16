@@ -2,6 +2,37 @@
 import numpy as np
 import pymap3d as pm
 from datetime import timedelta
+# ======================================================================================================================
+
+GnssState_Str = {
+    0 : "UNKNOWN",
+    1 : "CODE_LOCK",
+    2 : "BIT_SYNC",
+    3 : "SUBFRAME_SYNC",        
+    4 : "TOW_DECODED",          
+    5 : "MSEC_AMBIGUOUS",       
+    6 : "SYMBOL_SYNC",          
+    7 : "GLO_STRING_SYNC",      
+    8 : "GLO_TOD_DECODED",      
+    9 : "BDS_D2_BIT_SYNC",      
+    10 : "BDS_D2_SUBFRAME_SYNC", 
+    11 : "GAL_E1BC_CODE_LOCK",   
+    12 : "GAL_E1C_2ND_CODE_LOCK",
+    13 : "GAL_E1B_PAGE_SYNC",    
+    14 : "SBAS_SYNC",            
+    15 : "TOW_KNOWN",            
+    16 : "GLO_TOD_KNOWN",       
+    17 : "S_2ND_CODE_LOCK"        
+}
+
+GnssStateADR_Str = {
+    0 : "UNKNOWN",             
+    1 : "VALID",               
+    2 : "RESET",               
+    3 : "CYCLE_SLIP",                 
+    4 : "HALF_CYCLE_RESOLVED",        
+    5 : "HALF_CYCLE_REPORTED"            
+}
 
 # ======================================================================================================================
 
@@ -78,16 +109,30 @@ def filterValues(df, data_name, value):
 def getSplitState(state, bits=1, type='tracking'):
     
     # Split to bit array
-    out = [1 if state & (1 << (bits-1-n)) else np.nan for n in range(bits)]
+    states = [1 if state & (1 << (bits-1-n)) else np.nan for n in range(bits)]
 
     # Align state on a seperate integer to plot
-    out = [out[i] * (bits-i) for i in range(bits)]
+    states = [states[i] * (bits-i) for i in range(bits)]
 
     # Clean list from nan
     if type in 'tracking':
-        out = [GnssState_Str[x] for x in out if str(x) != 'nan']
+        states = [GnssState_Str[x] for x in states if str(x) != 'nan']
     elif type in 'phase':
-        out = [GnssStateADR_Str[x] for x in out if str(x) != 'nan']
+        states = [GnssStateADR_Str[x] for x in states if str(x) != 'nan']
 
-    return {"State_split":out}
+    out = {}
+    if type in 'tracking':
+        for _state in list(GnssState_Str.values()):
+            if _state in states:
+                out[f"TRACK_{_state}"] = True
+            else:
+                out[f"TRACK_{_state}"] = False
+    elif type in 'phase':
+        for _state in list(GnssStateADR_Str.values()):
+            if _state in states:
+                out[f"ADR_{_state}"] = True
+            else:
+                out[f"ADR_{_state}"] = False
+
+    return out
 

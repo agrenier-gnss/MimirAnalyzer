@@ -34,7 +34,9 @@ filepath = "./.data/dynamic_hervanta/log_mimir_SamsungA52_20230811150240.txt"
 filepath = "./.data/dynamic_hervanta/log_mimir_Xiaomi11_20230811141828.txt"
 filepath = "./.data/dynamic_hervanta/log_mimir_Xiaomi11_20230811150208.txt"
 
-log = LogReader(filepath, mode='mimir')
+filepath="./.data/2023_Dataset_Hervanta/S1_static/raw/log_GooglePixel7_20230217095501.txt"
+
+log = LogReader('test', 'test', filepath, mode='mimir')
 
 referenceEnabled = True
 filepath_ref = "./example_data/NMND18410025C_2023-04-14_13-03-45.pos"
