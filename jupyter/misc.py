@@ -5,34 +5,37 @@ from datetime import timedelta
 # ======================================================================================================================
 
 GnssState_Str = {
-    0 : "UNKNOWN",
-    1 : "CODE_LOCK",
-    2 : "BIT_SYNC",
-    3 : "SUBFRAME_SYNC",        
-    4 : "TOW_DECODED",          
-    5 : "MSEC_AMBIGUOUS",       
-    6 : "SYMBOL_SYNC",          
-    7 : "GLO_STRING_SYNC",      
-    8 : "GLO_TOD_DECODED",      
-    9 : "BDS_D2_BIT_SYNC",      
-    10 : "BDS_D2_SUBFRAME_SYNC", 
-    11 : "GAL_E1BC_CODE_LOCK",   
-    12 : "GAL_E1C_2ND_CODE_LOCK",
-    13 : "GAL_E1B_PAGE_SYNC",    
-    14 : "SBAS_SYNC",            
-    15 : "TOW_KNOWN",            
-    16 : "GLO_TOD_KNOWN",       
-    17 : "S_2ND_CODE_LOCK"        
+    0  : "TRACK_UNKNOWN",
+    1  : "TRACK_CODE_LOCK",
+    2  : "TRACK_BIT_SYNC",
+    3  : "TRACK_SUBFRAME_SYNC",        
+    4  : "TRACK_TOW_DECODED",          
+    5  : "TRACK_MSEC_AMBIGUOUS",       
+    6  : "TRACK_SYMBOL_SYNC",          
+    7  : "TRACK_GLO_STRING_SYNC",      
+    8  : "TRACK_GLO_TOD_DECODED",      
+    9  : "TRACK_BDS_D2_BIT_SYNC",      
+    10 : "TRACK_BDS_D2_SUBFRAME_SYNC", 
+    11 : "TRACK_GAL_E1BC_CODE_LOCK",   
+    12 : "TRACK_GAL_E1C_2ND_CODE_LOCK",
+    13 : "TRACK_GAL_E1B_PAGE_SYNC",    
+    14 : "TRACK_SBAS_SYNC",            
+    15 : "TRACK_TOW_KNOWN",            
+    16 : "TRACK_GLO_TOD_KNOWN",       
+    17 : "TRACK_S_2ND_CODE_LOCK"        
 }
 
 GnssStateADR_Str = {
-    0 : "UNKNOWN",             
-    1 : "VALID",               
-    2 : "RESET",               
-    3 : "CYCLE_SLIP",                 
-    4 : "HALF_CYCLE_RESOLVED",        
-    5 : "HALF_CYCLE_REPORTED"            
+    0 : "ADR_UNKNOWN",             
+    1 : "ADR_VALID",               
+    2 : "ADR_RESET",               
+    3 : "ADR_CYCLE_SLIP",                 
+    4 : "ADR_HALF_CYCLE_RESOLVED",        
+    5 : "ADR_HALF_CYCLE_REPORTED"            
 }
+
+# List of PRN GPS satellites with L5 enabled (Block 2F and on-ward)
+GPS_SAT_L5_ENABLED = [25,1,24,27,30,6,9,3,26,8,10,32,4,18,23,14,11,28]
 
 # ======================================================================================================================
 
@@ -124,15 +127,54 @@ def getSplitState(state, bits=1, type='tracking'):
     if type in 'tracking':
         for _state in list(GnssState_Str.values()):
             if _state in states:
-                out[f"TRACK_{_state}"] = True
+                out[f"{_state}"] = True
             else:
-                out[f"TRACK_{_state}"] = False
+                out[f"{_state}"] = False
     elif type in 'phase':
         for _state in list(GnssStateADR_Str.values()):
             if _state in states:
-                out[f"ADR_{_state}"] = True
+                out[f"{_state}"] = True
             else:
-                out[f"ADR_{_state}"] = False
+                out[f"{_state}"] = False
 
     return out
+
+# ======================================================================================================================
+
+def fixfile(filepath_in, filepath_out, mode):
+    string_to_add = ","
+
+    with open(filepath_in, 'r') as f:
+        file_lines = []
+        for line in f:
+            line_split = line.strip().split(",")
+            if line_split[0] == 'Raw':
+                if mode == 'old':
+                    line_split.insert(30, '')
+                    line_split.append('\n')
+                elif mode == 'new':
+                    line_split.append('\n')
+                file_lines.append(','.join(line_split))
+            else:
+                file_lines.append(line)
+
+    with open(filepath_out, 'w') as f:
+        f.writelines(file_lines) 
+
+    return 
+
+if __name__ == "__main__":
+
+    import os
+
+    path = ".data/2023_Dataset_Hervanta/S2_dynamic_campus/raw"
+    # dirs = os.listdir(".data/2023_Dataset_Hervanta/S2_dynamic_campus/raw")
+    files = [('log_GooglePixel7_20230801110405.txt', 'old'), 
+             ('log_GooglePixelWatch_20230801110404.txt', 'old'), 
+             ('log_OnePlusNord2_20230811103018.txt', 'new'), 
+             ('log_SamsungA52_20230811101903.txt', 'new'), 
+             ('log_Xiaomi11T_20230801111451.txt', 'old')]
+
+    for mfile in files:
+        fixfile(f"{path}/{mfile[0]}", f"{path}/{mfile[0][:-4]}_modified.txt", mode=mfile[1])
 

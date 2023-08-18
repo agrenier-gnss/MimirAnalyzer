@@ -10,6 +10,8 @@ import io
 from urllib.request import urlopen, Request
 from PIL import Image
 import pandas as pd
+import datetime
+import matplotlib
 
 import seaborn as sns
 
@@ -34,14 +36,14 @@ def plotENU(logs, lim, ticks):
     ylim_up = lim[2]
 
     # Init
-    fig, axs = plt.subplots(3, figsize=(8,6))
+    fig, axs = plt.subplots(3, figsize=(8,6), sharex=True)
     plt.suptitle('East / North / Up errors')
     for log in logs:
         df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
         df.index = [idx - df.index[0] for idx in df.index]
-        axs[0].plot(df['east'], label=f"{log.manufacturer} {log.device}")
-        axs[1].plot(df['north'], label=f"{log.manufacturer} {log.device}")
-        axs[2].plot(df['up'], label=f"{log.manufacturer} {log.device}")
+        axs[0].plot(df.index.seconds.tolist(), df['east'].tolist(), label=f"{log.manufacturer} {log.device}")
+        axs[1].plot(df.index.seconds.tolist(), df['north'].tolist(), label=f"{log.manufacturer} {log.device}")
+        axs[2].plot(df.index.seconds.tolist(), df['up'].tolist(), label=f"{log.manufacturer} {log.device}")
         
     # East
     axs[0].set_ylabel("East [m]")
@@ -63,6 +65,21 @@ def plotENU(logs, lim, ticks):
     axs[2].yaxis.set_major_formatter('{x:.0f}')
     axs[2].yaxis.set_minor_locator(MultipleLocator(minor_ticks_up))
     axs[2].set_ylim(-ylim_up, ylim_up)
+
+    
+    # X Axis formatter
+    axs[2].xaxis.set_minor_locator(MultipleLocator(60))
+    axs[2].xaxis.set_major_locator(MultipleLocator(300))
+
+    def timeTicks(x, pos):                                                                                                                                                                                                                                                         
+        d = datetime.timedelta(seconds=x)                                                                                                                                                                                                                                          
+        return str(d)                                                                                                                                                                                                                                                              
+    formatter = matplotlib.ticker.FuncFormatter(timeTicks)                                                                                                                                                                                                                         
+    axs[2].xaxis.set_major_formatter(formatter)
+
+    axs[0].margins(x=0)
+    axs[1].margins(x=0)
+    axs[2].margins(x=0)
         
     handles, labels = axs[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower left",
@@ -422,3 +439,96 @@ def plotMeasurement(log, data_name, sat):
     handles, labels = axs.get_legend_handles_labels()
     fig.legend(handles, labels, loc='upper right')
     fig.tight_layout()
+
+# ======================================================================================================================
+# Visibility
+
+def plotTotalSatellitesPerEpochs(logs):
+
+    fig, axs = plt.subplots(1, figsize=(6,5))
+    fig.suptitle(f"Total satellites seen per epoch")
+
+    for log in logs:
+
+        df = log.raw[['TimeNanos', 'prn']]
+        df = df.groupby('TimeNanos').count()
+        df.plot(y='prn', label=log.device, style='o', ms=2, ax=axs)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+def plotTotalSatellitesBar(logs, normalised=True):
+
+    width = 0.18
+
+    fig, axs = plt.subplots(1, figsize=(6,5))
+    fig.suptitle(f"Total visible satellites in scenario")
+
+    x = np.arange(len(logs))
+    sats = []
+    sats_L1 = []
+    sats_L5 = []
+    sats_L1_ref = []
+    sats_L5_ref = [] 
+    xticks = []
+
+    for log in logs:
+        
+        # Refs
+        time, sv = log.ref.indexes.values()
+        _sats_L1_ref = 0
+        _sats_L5_ref = 0
+        for sat in list(sv):
+            if ('G' in sat and int(sat[1:]) not in misc.GPS_SAT_L5_ENABLED) or 'I' in sat or 'R' in  sat:
+                _sats_L1_ref += 1
+            else:
+                _sats_L1_ref += 1
+                _sats_L5_ref += 1
+        
+        if normalised:
+            sum = _sats_L1_ref + _sats_L5_ref
+            _sats_L1_ref_perc = _sats_L1_ref / sum
+            _sats_L5_ref_perc = _sats_L5_ref / sum
+            sats_L1_ref.append(_sats_L1_ref_perc)
+            sats_L5_ref.append(_sats_L5_ref_perc)
+        else:
+            sats_L1_ref.append(_sats_L1_ref)
+            sats_L5_ref.append(_sats_L5_ref)
+
+        # Logs
+        _sats = log.raw['prn'].unique()
+        _sats_L1 = [x for x in _sats if 'L1' in x]
+        _sats_L5 = [x for x in _sats if 'L5' in x]
+
+        sats.append(len(_sats))
+        _sats_L1 = len(_sats_L1)
+        _sats_L5 = len(_sats_L5)
+        if normalised:
+            _sats_L1 = _sats_L1/_sats_L1_ref*_sats_L1_ref_perc
+            _sats_L5 = _sats_L5/_sats_L5_ref*_sats_L5_ref_perc
+        sats_L1.append(_sats_L1)
+        sats_L5.append(_sats_L5)
+        xticks.append(log.device)
+
+    # sats_L1_ref = np.array(sats_L1_ref)*100
+    # sats_L5_ref = np.array(sats_L5_ref)*100
+    # sats_L1     = np.array(sats_L1    )*100
+    # sats_L5     = np.array(sats_L5    )*100
+    axs.bar(x-0.1, sats_L1_ref, width, label='L1', color='tab:blue')
+    axs.bar(x-0.1, sats_L5_ref, width, bottom=sats_L1_ref, label='L5', color='tab:red')
+    axs.bar(x+0.1, sats_L1, width, color='#98BCE9')
+    axs.bar(x+0.1, sats_L5, width, bottom=sats_L1, color='#EB5957')
+    axs.set_xticks(x, xticks)
+
+    axs.set_ylabel("Number of satellites")
+    
+    # axs.yaxis.set_major_locator(MultipleLocator(0.1))
+    # axs.yaxis.set_major_formatter('{x:.1f}')
+    # axs.yaxis.set_minor_locator(MultipleLocator(0.01))
+    
+    axs.set_axisbelow(True)
+    axs.legend()
+    #axs.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=4)
+    fig.tight_layout()
+
+    
