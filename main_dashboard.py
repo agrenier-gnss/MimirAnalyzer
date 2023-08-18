@@ -20,25 +20,27 @@ filepath = '.data/static/gnss_log_GooglePixel7_2023_02_17_09_55_01.txt'
 
 # filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Xiaomi_11T/log_Xiaomi11T_20230801111451.txt"
 # filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Google_Pixel7/log_GooglePixel7_20230801110405.txt"
-# filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Google_PixelWatch/log_GooglePixelWatch_20230801110404.txt"
+filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Google_PixelWatch/log_GooglePixelWatch_20230801110404.txt"
 
 #filepath = "./.data/dynamic_campus/log_mimir_SamsungA52_Backpack_20230811102920.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixelWatch_20230811141922.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixelWatch_20230811150346.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixel7_20230811141817.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixel7_20230811150244.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_OnePlusNord2_20230811141819.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_OnePlusNord2_20230811150159.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_SamsungA52_20230811141745.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_SamsungA52_20230811150240.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_Xiaomi11_20230811141828.txt"
-filepath = "./.data/dynamic_hervanta/log_mimir_Xiaomi11_20230811150208.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixelWatch_20230811141922.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixelWatch_20230811150346.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixel7_20230811141817.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_GooglePixel7_20230811150244.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_OnePlusNord2_20230811141819.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_OnePlusNord2_20230811150159.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_SamsungA52_20230811141745.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_SamsungA52_20230811150240.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_Xiaomi11_20230811141828.txt"
+# filepath = "./.data/dynamic_hervanta/log_mimir_Xiaomi11_20230811150208.txt"
 
-filepath="./.data/2023_Dataset_Hervanta/S1_static/raw/log_GooglePixel7_20230217095501.txt"
+# filepath="./.data/2023_Dataset_Hervanta/S1_static/raw/log_GooglePixel7_20230217095501.txt"
+
+filepath="./.data/2023_Dataset_Hervanta/S2_dynamic_campus/raw/log_GooglePixel7_20230801110405_modified.txt"
 
 log = LogReader('test', 'test', filepath, mode='mimir')
 
-referenceEnabled = True
+referenceEnabled = False
 filepath_ref = "./example_data/NMND18410025C_2023-04-14_13-03-45.pos"
 if referenceEnabled:
     ref = PosReader(filepath_ref)

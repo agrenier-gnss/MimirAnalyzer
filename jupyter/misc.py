@@ -87,8 +87,12 @@ def get3DError(east, north, up):
 # ======================================================================================================================
 
 def filterPercentile(df, data_name, percentile):
+    size_before_filter = len(df)
     q = df[data_name].quantile(percentile)
     df = df[df[data_name].abs() < q]
+    size_after_filter = len(df)
+    diff = size_before_filter - size_after_filter
+    print(f"Rows removed {diff} ({diff / (size_before_filter)*100:.3f}%)")
     return df
 
 def removeFirstEntries(df, seconds=30):

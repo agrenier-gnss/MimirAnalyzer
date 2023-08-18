@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 
+import georinex as gr
+
 # =====================================================================================================================
 
 class GnssSystems:
@@ -453,7 +455,7 @@ class PosReader():
 
     def __init__(self, filepath:str):
 
-        self.pos = []
+        self.df = []
 
         self.load(filepath)
 
@@ -477,7 +479,8 @@ class PosReader():
                 i += 1
         
         # Convert to dataframes
-        self.pos = pd.DataFrame(pos)
+        self.df = pd.DataFrame(pos)
+        self.df.set_index('datetime', inplace=True)
         
         # print(self.pos)
 
@@ -505,12 +508,40 @@ class PosReader():
     
 # =====================================================================================================================
 
+class RinexReader():
+        
+    def __init__(self, filepath:str, tlim, meas, sampling):
+
+        self.df = []
+        
+        # load file
+        obs = gr.load(filepath, tlim=tlim, meas=meas)
+        self.df = obs.to_dataframe().dropna(how='all').reset_index().set_index('time')
+
+        # errors 
+        #dt = self.df.groupby('sv')['time'].diff().values
+
+        for meas in meas:
+            match(meas[0]):
+                case 'C' | 'L': 
+                    self.df[f"{meas}_rate"] = self.df.groupby('sv')[meas].diff().div(sampling, axis=0,)
+                    self.df[f"{meas}_error"] = self.df.groupby('sv')[f"{meas}_rate"].diff().div(sampling, axis=0,)
+                case 'D':
+                    self.df[f"{meas}_error"] = self.df.groupby('sv')[meas].diff().div(sampling, axis=0,)
+
+        return
+    
+# =====================================================================================================================
+
 if __name__ == "__main__":
     
     #filepath = "./.data/gnss_log_2023_04_14_15_23_32.txt"
     #filepath = "./.data/log_old_20230414152332.txt"
-    filepath = "./.data/log_mimir_20230715122058.txt"
-    log = LogReader(filepath)
+    # filepath = "./.data/log_mimir_20230715122058.txt"
+    # log = LogReader(filepath)
 
-    filepath = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"
-    log = PosReader(filepath)
+    # filepath = "./.data/NMND18410025C_2023-04-14_13-03-45.pos"
+    # log = PosReader(filepath)
+
+    filepath = './.data/2023_Dataset_Hervanta/S2_dynamic_campus/_reference/rover/NMND17420010S_2023-08-01_08-14-05.23O'
+    rinex = RinexReader(filepath, tlim=None, meas=['C1C', 'C5Q', 'C2I', 'C5P'], sampling=1)

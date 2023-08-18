@@ -22,7 +22,7 @@ plt.style.use('plot_style.mplstyle')
 # ======================================================================================================================
 # Position plots
 
-def plotENU(logs, lim, ticks):
+def plotENU(logs, lim, ticks, mode='reference'):
 
     # Params
     minor_ticks_east = ticks[0]
@@ -39,8 +39,12 @@ def plotENU(logs, lim, ticks):
     fig, axs = plt.subplots(3, figsize=(8,6), sharex=True)
     plt.suptitle('East / North / Up errors')
     for log in logs:
-        df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
-        df.index = [idx - df.index[0] for idx in df.index]
+        if mode == 'reference':
+            df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+            df.index = [idx - df.index[0] for idx in df.index]
+        elif mode == 'difference':
+            df = log.diff
+            df.index = [idx - df.index[0] for idx in df.index]
         axs[0].plot(df.index.seconds.tolist(), df['east'].tolist(), label=f"{log.manufacturer} {log.device}")
         axs[1].plot(df.index.seconds.tolist(), df['north'].tolist(), label=f"{log.manufacturer} {log.device}")
         axs[2].plot(df.index.seconds.tolist(), df['up'].tolist(), label=f"{log.manufacturer} {log.device}")
@@ -160,7 +164,7 @@ def plotStatisticsENU(logs, lim, ticks, mode='violin'):
 
         axs.set_title(f"{log.manufacturer} {log.device}")
         
-        pos = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
+        pos = log.diff[["east", "north", "up"]].dropna()
         data = [pos['east'], pos['north'], pos['up']]
 
         if mode == 'violin':
