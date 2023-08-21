@@ -354,6 +354,68 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+def plotStatisticsDataBox_ref(logs, data_name, ylabel, systems, frequencies, lim, ticks):
+
+    minor_ticks = ticks[0]
+    major_ticks = ticks[1]
+
+    for log in logs:
+
+        sats = list(set(log.raw["prn"]))
+        sats.sort()
+        
+        data = []
+        labels = []
+        for sys in systems:
+            _sats = [item for item in sats if item.startswith(sys)]
+            if sys == 'R':
+                __sats = _sats
+                df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
+
+                # Filter if neeeded
+                # q = df[data_name].quantile(0.99)
+                # df[data_name] = df[df[data_name].abs() < q]
+
+                _data = df[data_name]
+                data.append(_data[~np.isnan(_data)])
+                labels.append(f"{misc.getSystemStr(sys)}")
+            else:
+                for freq in frequencies:
+                    __sats = [item for item in _sats if item.endswith(freq[-1])]
+                    df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
+
+                    # # Filter if neeeded
+                    # q = df[data_name].quantile(0.99)
+                    # df[data_name] = df[df[data_name].abs() < q]
+
+                    _data = df[data_name]
+                    _data = _data[~np.isnan(_data)].tolist()
+                    
+                    if len(_data) != 0:
+                        data.append(_data)
+                    else:
+                        data.append([float('nan'), float('nan')])
+                    labels.append(f"{misc.getSystemStr(sys)}-{freq}")
+        
+        fig, axs = plt.subplots(1, figsize=(8,5))
+        fig.suptitle(f"{log.manufacturer} {log.device}")
+        axs.boxplot(data, showmeans=True, showfliers=False)
+        axs.set_xticks([y + 1 for y in range(len(data))], labels=labels)
+        axs.set_ylabel(ylabel)
+
+        axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+        axs.yaxis.set_major_formatter('{x:.1f}')
+        axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+
+        plt.ylim(-lim, lim)
+        axs.set_axisbelow(True)
+        handles, labels = axs.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper right')
+        fig.tight_layout()
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
 # Plot statistics data in violin
 def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim, ticks):
 
@@ -479,7 +541,7 @@ def plotTotalSatellitesBar(logs, normalised=True):
     for log in logs:
         
         # Refs
-        time, sv = log.ref.indexes.values()
+        time, sv = log.ref.xa.indexes.values()
         _sats_L1_ref = 0
         _sats_L5_ref = 0
         for sat in list(sv):

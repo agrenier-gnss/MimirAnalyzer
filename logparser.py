@@ -510,20 +510,23 @@ class PosReader():
 
 class RinexReader():
         
-    def __init__(self, filepath:str, tlim, meas, sampling):
+    def __init__(self, device, filepath:str, tlim, meas, sampling):
 
         self.df = []
+
+        self.device = device
+        self.measurements = meas
         
         # load file
-        obs = gr.load(filepath, tlim=tlim, meas=meas)
-        self.df = obs.to_dataframe().dropna(how='all').reset_index().set_index('time')
+        self.xa = gr.load(filepath, tlim=tlim, meas=meas)
+        self.df = self.xa.to_dataframe().dropna(how='all').reset_index().set_index('time')
 
         # errors 
         #dt = self.df.groupby('sv')['time'].diff().values
 
-        for meas in meas:
+        for meas in self.measurements:
             match(meas[0]):
-                case 'C' | 'L': 
+                case 'C' | 'L':
                     self.df[f"{meas}_rate"] = self.df.groupby('sv')[meas].diff().div(sampling, axis=0,)
                     self.df[f"{meas}_error"] = self.df.groupby('sv')[f"{meas}_rate"].diff().div(sampling, axis=0,)
                 case 'D':
