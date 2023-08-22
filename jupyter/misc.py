@@ -65,6 +65,25 @@ def getSystemStr(letter):
         case 'S':
             return "SBAS"
 
+def getSystemLetter(self, system:int):
+        match system:
+            case GnssSystems.GPS:
+                return 'G'
+            case GnssSystems.SBAS:
+                return 'S'
+            case GnssSystems.GLONASS:
+                return 'R'
+            case GnssSystems.QZSS:
+                return 'J'
+            case GnssSystems.BEIDOU:
+                return 'C'
+            case GnssSystems.GALILEO:
+                return 'E'
+            case GnssSystems.IRNSS:
+                return 'I'
+            case _:
+                return 'U'
+
 # ======================================================================================================================
 # Coordinate conversions
 

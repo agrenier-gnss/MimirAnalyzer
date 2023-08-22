@@ -4,6 +4,8 @@ import pandas as pd
 
 import georinex as gr
 
+import misc
+
 # =====================================================================================================================
 
 class GnssSystems:
@@ -508,6 +510,15 @@ class PosReader():
     
 # =====================================================================================================================
 
+def buildPRN(sv, signal):
+
+    if '1' in signal or '2' in signal:
+        frequency = 'L1'
+    elif '5':
+        frequency = 'L5'
+
+    return {'prn':f"{sv}-{frequency}", 'system': sv[0], 'frequency':frequency}
+
 class RinexReader():
         
     def __init__(self, device, filepath:str, tlim, meas, sampling):
@@ -521,16 +532,28 @@ class RinexReader():
         self.xa = gr.load(filepath, tlim=tlim, meas=meas)
         self.df = self.xa.to_dataframe().dropna(how='all').reset_index().set_index('time')
 
-        # errors 
-        #dt = self.df.groupby('sv')['time'].diff().values
+        # Re-organising the dataframe
+        df = pd.melt(
+            self.df, id_vars=['sv'], value_vars=meas, var_name='type', 
+            value_name='value', ignore_index=False).sort_index().sort_values('sv', kind='mergesort')
+        df['signal'] = df['type'].str[1:]
+        df = df.dropna()
+        df = df.replace(to_replace={'type': {r'D..': 'doppler', r'L..': 'phase', r'S..': 'snr', r'C..': 'pseudorange'}}, regex=True)
+        df = df.reset_index().set_index(keys=['time', 'sv']).sort_index()
+        df = pd.pivot_table(df, index=['time','sv','signal'], aggfunc='first',  columns='type', fill_value=np.nan)
+        df = df.reset_index(col_level=1)
+        df.columns = df.columns.droplevel()
+        df = df.rename_axis(None, axis=1)
+        df.set_index('time')
+        df[["prn", "system", "frequency"]] = df.apply(lambda row: buildPRN(row['sv'], row['signal']), axis='columns', result_type='expand')
+        self.df = df
 
-        for meas in self.measurements:
-            match(meas[0]):
-                case 'C' | 'L':
-                    self.df[f"{meas}_rate"] = self.df.groupby('sv')[meas].diff().div(sampling, axis=0,)
-                    self.df[f"{meas}_error"] = self.df.groupby('sv')[f"{meas}_rate"].diff().div(sampling, axis=0,)
-                case 'D':
-                    self.df[f"{meas}_error"] = self.df.groupby('sv')[meas].diff().div(sampling, axis=0,)
+        # Computing the errors
+        self.df[f"pseudorange_rate"] = self.df.groupby(['prn', 'signal'])['pseudorange'].diff().div(sampling, axis=0,)
+        self.df[f"pseudorange_error"] = self.df.groupby(['prn', 'signal'])['pseudorange_rate'].diff().div(sampling, axis=0,)
+        self.df[f"phase_rate"] = self.df.groupby(['prn', 'signal'])['phase'].diff().div(sampling, axis=0,)
+        self.df[f"phase_error"] = self.df.groupby(['prn', 'signal'])['phase_rate'].diff().div(sampling, axis=0,)
+        self.df[f"doppler_error"] = self.df.groupby(['prn', 'signal'])['doppler'].diff().div(sampling, axis=0,)
 
         return
     

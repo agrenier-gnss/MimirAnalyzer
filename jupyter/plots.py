@@ -293,14 +293,19 @@ def plotHistPerSystem(logs, systems, data_name, ticks, lim, absolute=False):
 # ----------------------------------------------------------------------------------------------------------------------
 
 # Plot statistics data in box
-def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ticks):
+def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ticks, mode='raw'):
 
     minor_ticks = ticks[0]
     major_ticks = ticks[1]
 
     for log in logs:
 
-        sats = list(set(log.raw["prn"]))
+        if mode == 'ref':
+            df = log.ref.df
+        elif mode == 'raw':
+            df = log.raw
+
+        sats = list(set(df["prn"]))
         sats.sort()
         
         data = []
@@ -309,25 +314,17 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
             _sats = [item for item in sats if item.startswith(sys)]
             if sys == 'R':
                 __sats = _sats
-                df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
+                _df = df.loc[df['prn'].isin(__sats), [data_name]]
 
-                # Filter if neeeded
-                # q = df[data_name].quantile(0.99)
-                # df[data_name] = df[df[data_name].abs() < q]
-
-                _data = df[data_name]
+                _data = _df[data_name]
                 data.append(_data[~np.isnan(_data)])
                 labels.append(f"{misc.getSystemStr(sys)}")
             else:
                 for freq in frequencies:
-                    __sats = [item for item in _sats if item.endswith(freq[-1])]
-                    df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
+                    __sats = [item for item in _sats if freq in item]
+                    _df = df.loc[df['prn'].isin(__sats), [data_name]]
 
-                    # # Filter if neeeded
-                    # q = df[data_name].quantile(0.99)
-                    # df[data_name] = df[df[data_name].abs() < q]
-
-                    _data = df[data_name]
+                    _data = _df[data_name]
                     _data = _data[~np.isnan(_data)].tolist()
                     
                     if len(_data) != 0:
@@ -351,81 +348,23 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
         handles, labels = axs.get_legend_handles_labels()
         fig.legend(handles, labels, loc='upper right')
         fig.tight_layout()
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-def plotStatisticsDataBox_ref(logs, data_name, ylabel, systems, frequencies, lim, ticks):
-
-    minor_ticks = ticks[0]
-    major_ticks = ticks[1]
-
-    for log in logs:
-
-        sats = list(set(log.raw["prn"]))
-        sats.sort()
-        
-        data = []
-        labels = []
-        for sys in systems:
-            _sats = [item for item in sats if item.startswith(sys)]
-            if sys == 'R':
-                __sats = _sats
-                df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
-
-                # Filter if neeeded
-                # q = df[data_name].quantile(0.99)
-                # df[data_name] = df[df[data_name].abs() < q]
-
-                _data = df[data_name]
-                data.append(_data[~np.isnan(_data)])
-                labels.append(f"{misc.getSystemStr(sys)}")
-            else:
-                for freq in frequencies:
-                    __sats = [item for item in _sats if item.endswith(freq[-1])]
-                    df = log.raw.loc[log.raw['prn'].isin(__sats), [data_name]]
-
-                    # # Filter if neeeded
-                    # q = df[data_name].quantile(0.99)
-                    # df[data_name] = df[df[data_name].abs() < q]
-
-                    _data = df[data_name]
-                    _data = _data[~np.isnan(_data)].tolist()
-                    
-                    if len(_data) != 0:
-                        data.append(_data)
-                    else:
-                        data.append([float('nan'), float('nan')])
-                    labels.append(f"{misc.getSystemStr(sys)}-{freq}")
-        
-        fig, axs = plt.subplots(1, figsize=(8,5))
-        fig.suptitle(f"{log.manufacturer} {log.device}")
-        axs.boxplot(data, showmeans=True, showfliers=False)
-        axs.set_xticks([y + 1 for y in range(len(data))], labels=labels)
-        axs.set_ylabel(ylabel)
-
-        axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
-        axs.yaxis.set_major_formatter('{x:.1f}')
-        axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
-
-        plt.ylim(-lim, lim)
-        axs.set_axisbelow(True)
-        handles, labels = axs.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='upper right')
-        fig.tight_layout()
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 # Plot statistics data in violin
-def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim, ticks):
+def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim, ticks, mode='raw'):
 
     minor_ticks = ticks[0]
     major_ticks = ticks[1]
-    percentile = 0.999
 
     for log in logs:
 
-        sats = list(set(log.raw["prn"]))
+        if mode == 'ref':
+            df = log.ref.df
+        elif mode == 'raw':
+            df = log.raw
+
+        sats = list(set(df["prn"]))
         sats.sort()
         
         labels = []
@@ -435,32 +374,28 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
         _sats = [item for item in sats if item.startswith(systems)]
         _sats = [item for item in _sats if item.endswith(tuple([freq[-1] for freq in frequencies]))]
         
-        df = log.raw.loc[log.raw['prn'].isin(_sats), ['prn', 'system', 'frequency', data_name]]
-        
-        # Filter if neeeded
-        q = df[data_name].quantile(percentile)
-        df = df[df[data_name].abs() < q]
+        _df = df.loc[df['prn'].isin(_sats), ['prn', 'system', 'frequency', data_name]]
 
-        df.reset_index(drop=True, inplace=True)
+        _df.reset_index(drop=True, inplace=True)
 
         # Correction for mono-frequencies
         for sys in systems:
-            _frequencies = list(set(df.loc[df['system'].isin([sys])]['frequency']))
+            _frequencies = list(set(_df.loc[_df['system'].isin([sys])]['frequency']))
             new_row = {'system':f'{sys}', 'frequency':'L1', data_name:float('nan')}
             
             if 'L1' not in _frequencies:
                 new_row = [f'{sys}00-L1', f'{sys}', 'L1', float('nan')]
-                df.loc[len(df.index)] = new_row
-                df.loc[len(df.index)] = new_row
+                _df.loc[len(_df.index)] = new_row
+                _df.loc[len(_df.index)] = new_row
             elif 'L5' not in _frequencies:
                 new_row = [f'{sys}00-L5', f'{sys}', 'L5', float('nan')]
-                df.loc[len(df.index)] = new_row
-                df.loc[len(df.index)] = new_row
+                _df.loc[len(_df.index)] = new_row
+                _df.loc[len(_df.index)] = new_row
         
         fig, axs = plt.subplots(1, figsize=(6,5))
         fig.suptitle(f"{log.manufacturer} {log.device}")
 
-        sns.violinplot(ax=axs, data=df, x='system', y=data_name, hue='frequency', 
+        sns.violinplot(ax=axs, data=_df, x='system', y=data_name, hue='frequency', 
                        order=systems, hue_order=frequencies, legend=False,
                        split=True, orient='v', palette=['#27aeef', '#ef9b20'] , zorder=3)
         plt.setp(axs.collections, alpha=.7)
@@ -479,6 +414,8 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
         # handles, labels = axs.get_legend_handles_labels()
         # fig.legend(handles, labels=frequencies)
         fig.tight_layout()
+
+        # Reference graph
 
 # ----------------------------------------------------------------------------------------------------------------------
 
