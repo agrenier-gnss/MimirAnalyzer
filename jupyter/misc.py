@@ -190,13 +190,16 @@ if __name__ == "__main__":
 
     import os
 
-    path = ".data/2023_Dataset_Hervanta/S2_dynamic_campus/raw"
+    #path = ".data/2023_Dataset_Hervanta/S2_dynamic_campus/raw"
     # dirs = os.listdir(".data/2023_Dataset_Hervanta/S2_dynamic_campus/raw")
-    files = [('log_GooglePixel7_20230801110405.txt', 'old'), 
-             ('log_GooglePixelWatch_20230801110404.txt', 'old'), 
-             ('log_OnePlusNord2_20230811103018.txt', 'new'), 
-             ('log_SamsungA52_20230811101903.txt', 'new'), 
-             ('log_Xiaomi11T_20230801111451.txt', 'old')]
+    # files = [('log_GooglePixel7_20230801110405.txt', 'old'), 
+    #          ('log_GooglePixelWatch_20230801110404.txt', 'old'), 
+    #          ('log_OnePlusNord2_20230811103018.txt', 'new'), 
+    #          ('log_SamsungA52_20230811101903.txt', 'new'), 
+    #          ('log_Xiaomi11T_20230801111451.txt', 'old')]
+
+    path = ".data/2023_Dataset_Hervanta/S1_static/raw"
+    files = [('log_GooglePixelWatch_20230814145154.txt', 'new')]
 
     for mfile in files:
         fixfile(f"{path}/{mfile[0]}", f"{path}/{mfile[0][:-4]}_modified.txt", mode=mfile[1])

@@ -300,9 +300,13 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
 
     for log in logs:
 
+        fig, axs = plt.subplots(1, figsize=(8,5))
+        fig.suptitle(f"{log.manufacturer} {log.device}")
         if mode == 'ref':
+            fig.suptitle(f"{log.manufacturer} {log.device} (Reference)")
             df = log.ref.df
         elif mode == 'raw':
+            fig.suptitle(f"{log.manufacturer} {log.device}")
             df = log.raw
 
         sats = list(set(df["prn"]))
@@ -333,8 +337,6 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
                         data.append([float('nan'), float('nan')])
                     labels.append(f"{misc.getSystemStr(sys)}-{freq}")
         
-        fig, axs = plt.subplots(1, figsize=(8,5))
-        fig.suptitle(f"{log.manufacturer} {log.device}")
         axs.boxplot(data, showmeans=True, showfliers=False)
         axs.set_xticks([y + 1 for y in range(len(data))], labels=labels)
         axs.set_ylabel(ylabel)
@@ -359,9 +361,13 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
 
     for log in logs:
 
+        fig, axs = plt.subplots(1, figsize=(6,5))
+
         if mode == 'ref':
+            fig.suptitle(f"{log.manufacturer} {log.device} (Reference)")
             df = log.ref.df
         elif mode == 'raw':
+            fig.suptitle(f"{log.manufacturer} {log.device}")
             df = log.raw
 
         sats = list(set(df["prn"]))
@@ -392,8 +398,7 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
                 _df.loc[len(_df.index)] = new_row
                 _df.loc[len(_df.index)] = new_row
         
-        fig, axs = plt.subplots(1, figsize=(6,5))
-        fig.suptitle(f"{log.manufacturer} {log.device}")
+        
 
         sns.violinplot(ax=axs, data=_df, x='system', y=data_name, hue='frequency', 
                        order=systems, hue_order=frequencies, legend=False,
@@ -457,8 +462,17 @@ def plotTotalSatellitesPerEpochs(logs):
         df = df.groupby('TimeNanos').count()
         df.plot(y='prn', label=log.device, style='o', ms=2, ax=axs)
 
-# ----------------------------------------------------------------------------------------------------------------------
+    def timeTicks(x, pos):                                                                                                                                                                                                                                                         
+        d = datetime.timedelta(seconds=x)                                                                                                                                                                                                                                          
+        return str(d)                                                                                                                                                                                                                                                              
+    formatter = matplotlib.ticker.FuncFormatter(timeTicks)                                                                                                                                                                                                                         
+    axs[2].xaxis.set_major_formatter(formatter)
 
+    axs[0].margins(x=0)
+    axs[1].margins(x=0)
+    axs[2].margins(x=0)
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 def plotTotalSatellitesBar(logs, normalised=True):
 

@@ -270,6 +270,7 @@ class LogReader():
             
             prn  = f"{self.getSystemLetter(mdict['ConstellationType'])}{mdict['Svid']:02d}"
             freq = f"{self.getFrequencyLabel(mdict['CarrierFrequencyHz'])}"
+            mdict["sv"] = f"{prn}"
             mdict["prn"] = f"{prn}-{freq}"
             mdict["system"] = f"{self.getSystemLetter(mdict['ConstellationType'])}" 
             mdict["frequency"] = freq
@@ -549,11 +550,14 @@ class RinexReader():
         self.df = df
 
         # Computing the errors
-        self.df[f"pseudorange_rate"] = self.df.groupby(['prn', 'signal'])['pseudorange'].diff().div(sampling, axis=0,)
-        self.df[f"pseudorange_error"] = self.df.groupby(['prn', 'signal'])['pseudorange_rate'].diff().div(sampling, axis=0,)
-        self.df[f"phase_rate"] = self.df.groupby(['prn', 'signal'])['phase'].diff().div(sampling, axis=0,)
-        self.df[f"phase_error"] = self.df.groupby(['prn', 'signal'])['phase_rate'].diff().div(sampling, axis=0,)
-        self.df[f"doppler_error"] = self.df.groupby(['prn', 'signal'])['doppler'].diff().div(sampling, axis=0,)
+        try:
+            self.df[f"pseudorange_rate"] = self.df.groupby(['prn', 'signal'])['pseudorange'].diff().div(sampling, axis=0,)
+            self.df[f"pseudorange_error"] = self.df.groupby(['prn', 'signal'])['pseudorange_rate'].diff().div(sampling, axis=0,)
+            self.df[f"phase_rate"] = self.df.groupby(['prn', 'signal'])['phase'].diff().div(sampling, axis=0,)
+            self.df[f"phase_error"] = self.df.groupby(['prn', 'signal'])['phase_rate'].diff().div(sampling, axis=0,)
+            self.df[f"doppler_error"] = self.df.groupby(['prn', 'signal'])['doppler'].diff().div(sampling, axis=0,)
+        except:
+            print("Error during errors computation, skipped.")
 
         return
     
