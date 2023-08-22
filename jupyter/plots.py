@@ -451,26 +451,41 @@ def plotMeasurement(log, data_name, sat):
 # ======================================================================================================================
 # Visibility
 
-def plotTotalSatellitesPerEpochs(logs):
+def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal'):
+
+    minor_ticks = ticks[0]
+    major_ticks = ticks[1]
+
+    if mode == 'signal':
+        column = 'prn'
+    elif mode == 'satellite':
+        column = 'sv'
 
     fig, axs = plt.subplots(1, figsize=(6,5))
-    fig.suptitle(f"Total satellites seen per epoch")
+    fig.suptitle(f"Total {mode}s seen per epoch")
 
     for log in logs:
 
-        df = log.raw[['TimeNanos', 'prn']]
-        df = df.groupby('TimeNanos').count()
-        df.plot(y='prn', label=log.device, style='o', ms=2, ax=axs)
+        df = log.raw[['TimeNanos', column]]
+        df = df.groupby('TimeNanos').nunique()
+        #df.plot(y='prn', label=log.device, style='o', ms=2, ax=axs)
+        time = np.array(df.index.tolist()) * 1e-9
+        axs.scatter(time - time[0], df[column].tolist(), label=f"{log.manufacturer} {log.device}", marker='.')
 
+    axs.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    axs.xaxis.set_major_locator(MultipleLocator(major_ticks))
     def timeTicks(x, pos):                                                                                                                                                                                                                                                         
         d = datetime.timedelta(seconds=x)                                                                                                                                                                                                                                          
         return str(d)                                                                                                                                                                                                                                                              
     formatter = matplotlib.ticker.FuncFormatter(timeTicks)                                                                                                                                                                                                                         
-    axs[2].xaxis.set_major_formatter(formatter)
+    axs.xaxis.set_major_formatter(formatter)
+    axs.set_axisbelow(True)
+    axs.legend()
+    axs.set_ylim(lim[0], lim[1])
+    fig.tight_layout()
 
-    axs[0].margins(x=0)
-    axs[1].margins(x=0)
-    axs[2].margins(x=0)
+    #axs.margins(x=0)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
