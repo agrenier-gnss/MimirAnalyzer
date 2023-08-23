@@ -350,6 +350,7 @@ class LogReader():
             case GnssSystems.GPS:
                 return 'G'
             case GnssSystems.SBAS:
+                print('SBAS FOUND!')
                 return 'S'
             case GnssSystems.GLONASS:
                 return 'R'
