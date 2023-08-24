@@ -523,7 +523,7 @@ def buildPRN(sv, signal):
 
 class RinexReader():
         
-    def __init__(self, device, filepath:str, tlim, meas, sampling):
+    def __init__(self, device, filepath:str, tlim=[], meas=['C1C'], sampling=1):
 
         self.df = []
 
@@ -531,7 +531,10 @@ class RinexReader():
         self.measurements = meas
         
         # load file
-        self.xa = gr.load(filepath, tlim=tlim, meas=meas)
+        if not tlim:
+            self.xa = gr.load(filepath, meas=meas)
+        else:
+            self.xa = gr.load(filepath, tlim=tlim, meas=meas)
         self.df = self.xa.to_dataframe().dropna(how='all').reset_index().set_index('time')
 
         # Re-organising the dataframe

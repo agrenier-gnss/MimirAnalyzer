@@ -487,87 +487,38 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal'):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotTotalSatellitesBar(logs, normalised=True):
+def statsSatellitesPerSystem(logs):
 
-    width = 0.18
-
-    fig, axs = plt.subplots(1, figsize=(6,5))
-    fig.suptitle(f"Total visible satellites in scenario")
-
-    x = np.arange(len(logs))
-    sats = []
-    sats_L1 = []
-    sats_L5 = []
-    sats_L1_ref = []
-    sats_L5_ref = [] 
-    xticks = []
-
-    for log in logs:
-        
-        # Refs
-        time, sv = log.ref.xa.indexes.values()
-        _sats_L1_ref = 0
-        _sats_L5_ref = 0
-        for sat in list(sv):
-            if ('G' in sat and int(sat[1:]) not in misc.GPS_SAT_L5_ENABLED) or 'I' in sat or 'R' in  sat:
-                _sats_L1_ref += 1
-            else:
-                _sats_L1_ref += 1
-                _sats_L5_ref += 1
-        
-        if normalised:
-            sum = _sats_L1_ref + _sats_L5_ref
-            _sats_L1_ref_perc = _sats_L1_ref / sum
-            _sats_L5_ref_perc = _sats_L5_ref / sum
-            sats_L1_ref.append(_sats_L1_ref_perc)
-            sats_L5_ref.append(_sats_L5_ref_perc)
-        else:
-            sats_L1_ref.append(_sats_L1_ref)
-            sats_L5_ref.append(_sats_L5_ref)
-
-        # Logs
-        _sats = log.raw['prn'].unique()
-        _sats_L1 = [x for x in _sats if 'L1' in x]
-        _sats_L5 = [x for x in _sats if 'L5' in x]
-
-        sats.append(len(_sats))
-        _sats_L1 = len(_sats_L1)
-        _sats_L5 = len(_sats_L5)
-        if normalised:
-            _sats_L1 = _sats_L1/_sats_L1_ref*_sats_L1_ref_perc
-            _sats_L5 = _sats_L5/_sats_L5_ref*_sats_L5_ref_perc
-        sats_L1.append(_sats_L1)
-        sats_L5.append(_sats_L5)
-        xticks.append(log.device)
-        print(f"--- {log.device} ---")
-        print(f"L1   : {_sats_L1} ({_sats_L1_ref}) - {_sats_L1 / _sats_L1_ref * 100:.2f}")
-        print(f"L5   : {_sats_L5} ({_sats_L5_ref}) - {_sats_L5 / _sats_L5_ref * 100}")
-        print(f"Total: {_sats_L1+_sats_L5} ({_sats_L1_ref+_sats_L5_ref}) - {(_sats_L1+_sats_L5) / (_sats_L1_ref+_sats_L5_ref) * 100:.2f}")
-
-    axs.bar(x-0.1, sats_L1_ref, width, label='L1', color='tab:blue')
-    axs.bar(x-0.1, sats_L5_ref, width, bottom=sats_L1_ref, label='L5', color='tab:red')
-    axs.bar(x+0.1, sats_L1, width, color='#98BCE9')
-    axs.bar(x+0.1, sats_L5, width, bottom=sats_L1, color='#EB5957')
-    axs.set_xticks(x, xticks)
-
-    axs.set_ylabel("Number of satellites")
+    systems = ['G', 'R', 'E', 'C', 'I', 'S', 'J']
     
-    axs.set_axisbelow(True)
-    axs.legend()
-    fig.tight_layout()
+    df_stats = pd.DataFrame()
+    devices = []
+    for log in logs:
+        devices.append(log.device)
+    df_stats['device'] = devices
+
+    for sys in systems:
+        _bars_dev = []
+        _bars_ref = []
+        for log in logs:
+            sat_dev = log.raw[log.raw.prn.str.match(rf'{sys}[0-9]{{2,3}}-L.')]['prn'].nunique()
+            sat_ref = log.ref.df[log.ref.df.prn.str.match(rf'{sys}[0-9]{{2,3}}-L.')]['prn'].nunique()
+            _bars_dev.append(sat_dev)
+            _bars_ref.append(sat_ref)
+        df_stats[f"{sys}"] = _bars_dev
+        df_stats[f"{sys}_ref"] = _bars_ref
+        
+    return df_stats
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotSatellitesBarPerSystem(logs, normalised=True):
+def plotBarSatellitesPerSystem(logs):
 
     width = 0.18
 
     systems = ['G', 'R', 'E', 'C', 'I', 'S', 'J']
     frequencies = ['L1', 'L5']
-
-    fig, axs = plt.subplots(1, figsize=(6,5))
-    fig.suptitle(f"Visible satellites per constellations")
-    x = np.arange(len(logs))
 
     bars_dev = []
     bars_ref = []
@@ -579,10 +530,15 @@ def plotSatellitesBarPerSystem(logs, normalised=True):
             sat_ref = log.ref.df[log.ref.df.prn.str.match(rf'{sys}[0-9]{{2,3}}-L.')]['prn'].nunique()
             _bars_dev.append(sat_dev)
             _bars_ref.append(sat_ref)
-            print(f"{log.device:<16} | {sys}: {sat_dev} ({sat_ref}) - {sat_dev / sat_ref * 100:.1f}%")
+            
         bars_dev.append(_bars_dev)
         bars_ref.append(_bars_ref)
-    
+
+    # Plot
+    fig, axs = plt.subplots(1, figsize=(6,5))
+    fig.suptitle(f"Visible satellites per constellations")
+    x = np.arange(len(logs))
+
     colors_ref = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:pink', 'tab:brown']
     colors_dev = colors_ref
     for i in range(len(bars_dev)):
@@ -596,10 +552,10 @@ def plotSatellitesBarPerSystem(logs, normalised=True):
         axs.bar(x-0.1, bars_ref[i], width, bottom=bottom_ref, label=misc.getSystemStr(systems[i]), color=colors_ref[i])
         axs.bar(x+0.1, bars_dev[i], width, bottom=bottom_dev, color=colors_dev[i])
     
-    xticks = []
+    devices = []
     for log in logs:
-        xticks.append(log.device)
-    axs.set_xticks(x, xticks)
+        devices.append(log.device)
+    axs.set_xticks(x, devices)
     axs.set_ylabel("Number of satellites")
     axs.set_axisbelow(True)
     handles, labels = axs.get_legend_handles_labels()
@@ -607,7 +563,36 @@ def plotSatellitesBarPerSystem(logs, normalised=True):
             mode="expand", ncol=len(labels))
     fig.tight_layout(rect=[0, 0.03, 1, 1])
 
-def plotSatellitesBarPerFrequency(logs):
+    return 
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def statsSatellitesPerFrequency(logs):
+
+    frequencies = ['L1', 'L5']
+    
+    df_stats = pd.DataFrame()
+    devices = []
+    for log in logs:
+        devices.append(log.device)
+    df_stats['device'] = devices
+
+    for freq in frequencies:
+        _bars_dev = []
+        _bars_ref = []
+        for log in logs:
+            sat_dev = log.raw[log.raw.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')]['prn'].nunique()
+            sat_ref = log.ref.df[log.ref.df.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')]['prn'].nunique()
+            _bars_dev.append(sat_dev)
+            _bars_ref.append(sat_ref)
+        df_stats[f"{freq}"] = _bars_dev
+        df_stats[f"{freq}_ref"] = _bars_ref
+        
+    return df_stats
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotBarSatellitesPerFrequency(logs):
 
     width = 0.18
 
@@ -628,8 +613,6 @@ def plotSatellitesBarPerFrequency(logs):
             sat_ref = log.ref.df[log.ref.df.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')]['prn'].nunique()
             _bars_dev.append(sat_dev)
             _bars_ref.append(sat_ref)
-
-            print(f"{log.device:<16} | {freq}: {sat_dev} ({sat_ref}) - {sat_dev / sat_ref * 100:.1f}%")
         bars_dev.append(_bars_dev)
         bars_ref.append(_bars_ref)
     
@@ -643,7 +626,7 @@ def plotSatellitesBarPerFrequency(logs):
             bottom_dev = np.zeros(len(logs))
             bottom_ref = np.zeros(len(logs))
 
-        axs.bar(x-0.1, bars_ref[i], width, bottom=bottom_ref, label=misc.getSystemStr(frequencies[i]), color=colors_ref[i])
+        axs.bar(x-0.1, bars_ref[i], width, bottom=bottom_ref, label=frequencies[i], color=colors_ref[i])
         axs.bar(x+0.1, bars_dev[i], width, bottom=bottom_dev, color=colors_dev[i])
     
     xticks = []

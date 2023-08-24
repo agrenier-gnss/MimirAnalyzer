@@ -198,8 +198,12 @@ if __name__ == "__main__":
     #          ('log_SamsungA52_20230811101903.txt', 'new'), 
     #          ('log_Xiaomi11T_20230801111451.txt', 'old')]
 
-    path = ".data/2023_Dataset_Hervanta/S1_static/raw"
-    files = [('log_GooglePixelWatch_20230814145154.txt', 'new')]
+    path = ".data/2023_Dataset_Hervanta/S4_dynamic_lake/raw"
+    files = [('log_GooglePixel7_20230811150244.txt', 'new'),
+             ('log_GooglePixelWatch_20230811150346.txt', 'new'),
+             ('log_OnePlusNord2_20230811150159.txt', 'new'),
+             ('log_SamsungA52_20230811150240.txt', 'new'),
+             ('log_Xiaomi11_20230811150208.txt', 'new')]
 
     for mfile in files:
         fixfile(f"{path}/{mfile[0]}", f"{path}/{mfile[0][:-4]}_modified.txt", mode=mfile[1])
