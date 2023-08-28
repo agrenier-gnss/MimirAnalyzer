@@ -187,7 +187,7 @@ def plotStatisticsENU(logs, lim, ticks, mode='violin'):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotMap(locations, extent, scale):
+def plotMap(locations, extent, scale, marker='', markersize=1):
     """
     Taken from: https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy
     Mapping New York City Open Street Map (OSM) with Cartopy
@@ -209,7 +209,7 @@ def plotMap(locations, extent, scale):
     cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
     osm_img = cimgt.OSM() # spoofed, downloaded street map
 
-    fig = plt.figure(figsize=(8,8)) # open matplotlib figure
+    fig = plt.figure(figsize=(6,6)) # open matplotlib figure
     ax1 = plt.axes(projection=osm_img.crs) # project using coordinate reference system (CRS) of street map
     ax1.set_extent(extent) # set extents
 
@@ -218,7 +218,7 @@ def plotMap(locations, extent, scale):
     # Polylines
     for label, loc in locations.items():
         ax1.plot(loc['longitude'].to_list(), loc['latitude'].to_list(),
-                 linewidth=2, transform=ccrs.Geodetic(), label=label)
+                 linewidth=2, marker=marker, markersize=markersize, transform=ccrs.Geodetic(), label=label)
     
     # Grid
     # gl = ax1.gridlines(draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
@@ -228,8 +228,8 @@ def plotMap(locations, extent, scale):
 
     ax1.set_xticks(np.linspace(extent[0],extent[1],7),crs=ccrs.PlateCarree()) # set longitude indicators
     ax1.set_yticks(np.linspace(extent[2],extent[3],7)[1:],crs=ccrs.PlateCarree()) # set latitude indicators
-    lon_formatter = LongitudeFormatter(number_format='0.3f',degree_symbol='',dateline_direction_label=True) # format lons
-    lat_formatter = LatitudeFormatter(number_format='0.3f',degree_symbol='') # format lats
+    lon_formatter = LongitudeFormatter(number_format='0.4f',degree_symbol='',dateline_direction_label=True) # format lons
+    lat_formatter = LatitudeFormatter(number_format='0.4f',degree_symbol='') # format lats
     ax1.xaxis.set_major_formatter(lon_formatter) # set lons
     ax1.yaxis.set_major_formatter(lat_formatter) # set lats
     # ax1.xaxis.set_tick_params(labelsize=14)
