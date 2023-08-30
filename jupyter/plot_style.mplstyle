@@ -25,6 +25,6 @@ ytick.labelsize:    medium          # fontsize of the tick labels# Change font a
 
 # Font
 font.family:        Arial
-font.size:          10.0
+font.size:          12.0
 axes.titlesize:     x-large         # fontsize of the axes title
 axes.labelsize:     large           # fontsize of the x and y labels
