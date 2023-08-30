@@ -1,6 +1,7 @@
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+import matplotlib
 
 import numpy as np
 import cartopy.crs as ccrs
@@ -11,7 +12,7 @@ from urllib.request import urlopen, Request
 from PIL import Image
 import pandas as pd
 import datetime
-import matplotlib
+
 
 import seaborn as sns
 
@@ -22,21 +23,21 @@ plt.style.use('plot_style.mplstyle')
 # ======================================================================================================================
 # Position plots
 
-def plotENU(logs, lim, ticks, mode='reference'):
+def plotENU(logs, lim, yticks, xticks, mode='reference'):
 
     # Params
-    minor_ticks_east = ticks[0]
-    major_ticks_east = ticks[1]
-    minor_ticks_north = ticks[2]
-    major_ticks_north = ticks[3]
-    minor_ticks_up = ticks[4]
-    major_ticks_up = ticks[5]
+    minor_ticks_east = yticks[0]
+    major_ticks_east = yticks[1]
+    minor_ticks_north = yticks[2]
+    major_ticks_north = yticks[3]
+    minor_ticks_up = yticks[4]
+    major_ticks_up = yticks[5]
     ylim_east = lim[0]
     ylim_north = lim[1]
     ylim_up = lim[2]
 
     # Init
-    fig, axs = plt.subplots(3, figsize=(8,6), sharex=True)
+    fig, axs = plt.subplots(3, figsize=(6,6), sharex=True)
     plt.suptitle('East / North / Up errors')
     for log in logs:
         if mode == 'reference':
@@ -45,9 +46,9 @@ def plotENU(logs, lim, ticks, mode='reference'):
         elif mode == 'difference':
             df = log.diff
             df.index = [idx - df.index[0] for idx in df.index]
-        axs[0].plot(df.index.seconds.tolist(), df['east'].tolist(), label=f"{log.manufacturer} {log.device}")
-        axs[1].plot(df.index.seconds.tolist(), df['north'].tolist(), label=f"{log.manufacturer} {log.device}")
-        axs[2].plot(df.index.seconds.tolist(), df['up'].tolist(), label=f"{log.manufacturer} {log.device}")
+        axs[0].plot(df.index.seconds.tolist(), df['east'].tolist(), label=f"{log.device}")
+        axs[1].plot(df.index.seconds.tolist(), df['north'].tolist(), label=f"{log.device}")
+        axs[2].plot(df.index.seconds.tolist(), df['up'].tolist(), label=f"{log.device}")
         
     # East
     axs[0].set_ylabel("East [m]")
@@ -72,8 +73,8 @@ def plotENU(logs, lim, ticks, mode='reference'):
 
     
     # X Axis formatter
-    axs[2].xaxis.set_minor_locator(MultipleLocator(60))
-    axs[2].xaxis.set_major_locator(MultipleLocator(300))
+    axs[2].xaxis.set_minor_locator(MultipleLocator(xticks[0]))
+    axs[2].xaxis.set_major_locator(MultipleLocator(xticks[1]))
 
     def timeTicks(x, pos):                                                                                                                                                                                                                                                         
         d = datetime.timedelta(seconds=x)                                                                                                                                                                                                                                          
@@ -81,15 +82,17 @@ def plotENU(logs, lim, ticks, mode='reference'):
     formatter = matplotlib.ticker.FuncFormatter(timeTicks)                                                                                                                                                                                                                         
     axs[2].xaxis.set_major_formatter(formatter)
 
+    plt.xlabel('Duration')
+
     axs[0].margins(x=0)
     axs[1].margins(x=0)
     axs[2].margins(x=0)
         
     handles, labels = axs[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower left",
-            mode="expand", ncol=len(labels))
+    fig.legend(labels, loc='upper right', ncols=len(labels), bbox_to_anchor=(1.0, 0.95), framealpha=1.0) 
 
-    fig.tight_layout(rect=[0, 0.03, 1, 1])
+    #fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.tight_layout()
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -337,14 +340,15 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
                         data.append([float('nan'), float('nan')])
                     labels.append(f"{misc.getSystemStr(sys)}-{freq}")
         
-        axs.boxplot(data, showmeans=True, showfliers=False)
+        meanpointprops = dict(markeredgecolor='#87bc45', markerfacecolor='#87bc45')
+        axs.boxplot(data, showmeans=True, meanprops=meanpointprops, showfliers=False)
         axs.set_xticks([y + 1 for y in range(len(data))], labels=labels)
         axs.set_ylabel(ylabel)
 
         axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
         axs.yaxis.set_major_formatter('{x:.1f}')
         axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
-
+        
         plt.ylim(-lim, lim)
         axs.set_axisbelow(True)
         handles, labels = axs.get_legend_handles_labels()
@@ -480,6 +484,7 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal'):
     axs.set_axisbelow(True)
     axs.legend()
     axs.set_ylim(lim[0], lim[1])
+    axs.set_xlabel("Duration")
     fig.tight_layout()
 
     #axs.margins(x=0)
@@ -535,11 +540,11 @@ def plotBarSatellitesPerSystem(logs):
         bars_ref.append(_bars_ref)
 
     # Plot
-    fig, axs = plt.subplots(1, figsize=(6,5))
+    fig, axs = plt.subplots(1, figsize=(6,4))
     fig.suptitle(f"Visible satellites per constellations")
     x = np.arange(len(logs))
 
-    colors_ref = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:pink', 'tab:brown']
+    colors_ref = ["#82c8f0", "#f5a5c8", "#ffdca5", "#7dcdbe", "#4e008e", "#c3b9d7", "#cf286f"]
     colors_dev = colors_ref
     for i in range(len(bars_dev)):
         if i > 0:
@@ -556,12 +561,13 @@ def plotBarSatellitesPerSystem(logs):
     for log in logs:
         devices.append(log.device)
     axs.set_xticks(x, devices)
-    axs.set_ylabel("Number of satellites")
     axs.set_axisbelow(True)
+
     handles, labels = axs.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower left",
-            mode="expand", ncol=len(labels))
-    fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.legend(handles, systems, loc='upper right', ncols=len(labels), bbox_to_anchor=(1.0, 0.95), framealpha=1.0) 
+
+    #fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.tight_layout()
 
     return 
 
@@ -599,7 +605,7 @@ def plotBarSatellitesPerFrequency(logs):
     #systems = ['G', 'R', 'E', 'C', 'I', 'S', 'J']
     frequencies = ['L1', 'L5']
 
-    fig, axs = plt.subplots(1, figsize=(6,5))
+    fig, axs = plt.subplots(1, figsize=(6,4))
     fig.suptitle(f"Visible satellites per constellations")
     x = np.arange(len(logs))
 
@@ -633,7 +639,6 @@ def plotBarSatellitesPerFrequency(logs):
     for log in logs:
         xticks.append(log.device)
     axs.set_xticks(x, xticks)
-    axs.set_ylabel("Number of satellites")
     axs.set_axisbelow(True)
     axs.legend()
     fig.tight_layout()

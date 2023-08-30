@@ -8,6 +8,7 @@ figure.titleweight: bold
 
 # Axes
 axes.prop_cycle:    cycler('color', ["#27aeef", "#ea5545", "#b33dc6", "#ef9b20", "#87bc45"])# Remove top and right spines
+#axes.prop_cycle:    cycler('color', ["#82c8f0", "#f5a5c8", "#ffdca5", "#7dcdbe", "#c8c8c8", "#cf286f"])
 axes.spines.left:   True            # display axis spines
 axes.spines.bottom: True
 axes.spines.top:    True
