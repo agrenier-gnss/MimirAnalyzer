@@ -303,7 +303,7 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
 
     for log in logs:
 
-        fig, axs = plt.subplots(1, figsize=(8,5))
+        fig, axs = plt.subplots(1, figsize=(4,4))
         fig.suptitle(f"{log.manufacturer} {log.device}")
         if mode == 'ref':
             fig.suptitle(f"{log.manufacturer} {log.device} (Reference)")
@@ -325,7 +325,8 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
 
                 _data = _df[data_name]
                 data.append(_data[~np.isnan(_data)])
-                labels.append(f"{misc.getSystemStr(sys)}")
+                #labels.append(f"{misc.getSystemStr(sys)}-{freq}")
+                labels.append(f"{sys}-L1")
             else:
                 for freq in frequencies:
                     __sats = [item for item in _sats if freq in item]
@@ -338,7 +339,8 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
                         data.append(_data)
                     else:
                         data.append([float('nan'), float('nan')])
-                    labels.append(f"{misc.getSystemStr(sys)}-{freq}")
+                    #labels.append(f"{misc.getSystemStr(sys)}-{freq}")
+                    labels.append(f"{sys}-{freq}")
         
         meanpointprops = dict(markeredgecolor='#87bc45', markerfacecolor='#87bc45')
         axs.boxplot(data, showmeans=True, meanprops=meanpointprops, showfliers=False)
@@ -365,7 +367,7 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
 
     for log in logs:
 
-        fig, axs = plt.subplots(1, figsize=(6,5))
+        fig, axs = plt.subplots(1, figsize=(5,4))
 
         if mode == 'ref':
             fig.suptitle(f"{log.manufacturer} {log.device} (Reference)")
