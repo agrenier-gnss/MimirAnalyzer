@@ -89,10 +89,11 @@ keys_old   = ["Raw", "timestamp", "TimeNanos", "LeapSecond", "TimeUncertaintyNan
 
 class LogReader():
 
-    def __init__(self, manufacturer, device, filepath:str, specifiedTags=[], mode='logger'):
+    def __init__(self, manufacturer, device, acronym, filepath:str, specifiedTags=[], mode='logger'):
         
         self.manufacturer = manufacturer
         self.device = device
+        self.acronym = acronym
         self.specifiedTags = specifiedTags
         self.mode = mode
 

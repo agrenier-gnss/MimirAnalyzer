@@ -19,11 +19,13 @@ import seaborn as sns
 import misc
 
 plt.style.use('plot_style.mplstyle')
+
+CM_TO_INCH = 1/2.54
         
 # ======================================================================================================================
 # Position plots
 
-def plotENU(logs, lim, yticks, xticks, mode='reference'):
+def plotENU(logs, lim, yticks, xticks, mode='reference', save=None):
 
     # Params
     minor_ticks_east = yticks[0]
@@ -46,9 +48,9 @@ def plotENU(logs, lim, yticks, xticks, mode='reference'):
         elif mode == 'difference':
             df = log.diff
             df.index = [idx - df.index[0] for idx in df.index]
-        axs[0].plot(df.index.seconds.tolist(), df['east'].tolist(), label=f"{log.device}")
-        axs[1].plot(df.index.seconds.tolist(), df['north'].tolist(), label=f"{log.device}")
-        axs[2].plot(df.index.seconds.tolist(), df['up'].tolist(), label=f"{log.device}")
+        axs[0].plot(df.index.seconds.tolist(), df['east'].tolist(), label=f"{log.acronym}")
+        axs[1].plot(df.index.seconds.tolist(), df['north'].tolist(), label=f"{log.acronym}")
+        axs[2].plot(df.index.seconds.tolist(), df['up'].tolist(), label=f"{log.acronym}")
         
     # East
     axs[0].set_ylabel("East [m]")
@@ -94,9 +96,12 @@ def plotENU(logs, lim, yticks, xticks, mode='reference'):
     #fig.tight_layout(rect=[0, 0.03, 1, 1])
     fig.tight_layout()
 
+    if save is not None:
+        plt.savefig(f"{save}.png", dpi=300)
+
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotEN(logs, lim, ticks):
+def plotEN(logs, lim, ticks, save=None):
     
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -105,7 +110,7 @@ def plotEN(logs, lim, ticks):
     i = 0
     for log in logs:
         df = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
-        df.plot(x='east', y='north', kind='scatter', label=f"{log.manufacturer} {log.device}",
+        df.plot(x='east', y='north', kind='scatter', label=f"{log.acronym}",
                 color=colors[i], s=6, zorder=3, ax=axs)
         i+=1
     
@@ -128,6 +133,9 @@ def plotEN(logs, lim, ticks):
     axs.xaxis.set_major_formatter('{x:.0f}')
     axs.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
 
+    if save is not None:
+        plt.savefig(f"{save}.png", dpi=300)
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 def plotHistENU(logs):
@@ -137,7 +145,7 @@ def plotHistENU(logs):
 
     for log in logs:
         fig, axs = plt.subplots(1, figsize=(6,4))
-        fig.suptitle(f"Histogram ENU errors ({log.manufacturer} {log.device})")
+        fig.suptitle(f"Histogram ENU errors ({log.manufacturer} {log.acronym})")
         pos = log.fix.loc[log.fix['provider'].isin(['GPS']), ["east", "north", "up"]]
 
         bins = np.linspace(-lim, lim, nb_bins)
@@ -165,7 +173,7 @@ def plotStatisticsENU(logs, lim, ticks, mode='violin'):
 
         fig, axs = plt.subplots(1, figsize=(4,4))
 
-        axs.set_title(f"{log.manufacturer} {log.device}")
+        axs.set_title(f"{log.manufacturer} {log.acronym}")
         
         pos = log.diff[["east", "north", "up"]].dropna()
         data = [pos['east'], pos['north'], pos['up']]
@@ -256,7 +264,7 @@ def plotHistPerSystem(logs, systems, data_name, ticks, lim, absolute=False):
 
     for log in logs:
         fig, axs = plt.subplots(1, figsize=(6,4))
-        fig.suptitle(f"Histogram pseudorange errors ({log.manufacturer} {log.device})")
+        fig.suptitle(f"Histogram pseudorange errors ({log.manufacturer} {log.acronym})")
 
         sats = list(set(log.raw["prn"]))
         sats.sort()
@@ -296,20 +304,23 @@ def plotHistPerSystem(logs, systems, data_name, ticks, lim, absolute=False):
 # ----------------------------------------------------------------------------------------------------------------------
 
 # Plot statistics data in box
-def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ticks, mode='raw'):
+def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ticks, mode='raw', save=None):
 
     minor_ticks = ticks[0]
     major_ticks = ticks[1]
 
+    figsize=(4.5,3)
+
+    log_data_list = []
+    device_list =[]
     for log in logs:
 
-        fig, axs = plt.subplots(1, figsize=(4,4))
-        fig.suptitle(f"{log.manufacturer} {log.device}")
+        fig, axs = plt.subplots(1, figsize=figsize)
         if mode == 'ref':
-            fig.suptitle(f"{log.manufacturer} {log.device} (Reference)")
+            #fig.suptitle(f"{log.manufacturer} {log.acronym} (Reference)")
             df = log.ref.df
         elif mode == 'raw':
-            fig.suptitle(f"{log.manufacturer} {log.device}")
+            #fig.suptitle(f"{log.manufacturer} {log.acronym}")
             df = log.raw
 
         sats = list(set(df["prn"]))
@@ -324,7 +335,7 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
                 _df = df.loc[df['prn'].isin(__sats), [data_name]]
 
                 _data = _df[data_name]
-                data.append(_data[~np.isnan(_data)])
+                data.append(_data[~np.isnan(_data)].tolist())
                 #labels.append(f"{misc.getSystemStr(sys)}-{freq}")
                 labels.append(f"{sys}-L1")
             else:
@@ -353,27 +364,55 @@ def plotStatisticsDataBox(logs, data_name, ylabel, systems, frequencies, lim, ti
         
         plt.ylim(-lim, lim)
         axs.set_axisbelow(True)
-        handles, labels = axs.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='upper right')
+        #handles, labels = axs.get_legend_handles_labels()
+        #fig.legend(handles, labels, loc='upper right')
         fig.tight_layout()
+
+        if save is not None:
+            plt.savefig(f"{save}_{log.acronym}.png", dpi=300)
+        
+        data = [x for x in sum(data, []) if ~np.isnan(x)]
+        log_data_list.append(data)
+        device_list.append(log.acronym)
+
+    # Global plot for all logs
+    fig, axs = plt.subplots(1, figsize=figsize)
+    axs.boxplot(log_data_list, showmeans=True, meanprops=meanpointprops, showfliers=False)
+    axs.set_xticks([y + 1 for y in range(len(log_data_list))], labels=device_list)
+    axs.set_ylabel(ylabel)
+
+    axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs.yaxis.set_major_formatter('{x:.1f}')
+    axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    
+    plt.ylim(-lim, lim)
+    axs.set_axisbelow(True)
+    fig.tight_layout()
+
+    if save is not None:
+        plt.savefig(f"{save}_all.png", dpi=300)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 # Plot statistics data in violin
-def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim, ticks, mode='raw'):
+def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim, ticks, mode='raw', save=None):
 
     minor_ticks = ticks[0]
     major_ticks = ticks[1]
 
+    figsize = (4.5,3)
+
+    log_df_dict = {}
+    device_list = []
     for log in logs:
 
-        fig, axs = plt.subplots(1, figsize=(5,4))
+        fig, axs = plt.subplots(1, figsize=figsize)
 
         if mode == 'ref':
-            fig.suptitle(f"{log.manufacturer} {log.device} (Reference)")
+            #fig.suptitle(f"{log.manufacturer} {log.acronym} (Reference)")
             df = log.ref.df
         elif mode == 'raw':
-            fig.suptitle(f"{log.manufacturer} {log.device}")
+            #fig.suptitle(f"{log.manufacturer} {log.acronym}")
             df = log.raw
 
         sats = list(set(df["prn"]))
@@ -381,7 +420,8 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
         
         labels = []
         for sys in systems:
-            labels.append(f"{misc.getSystemStr(sys)}")
+            #labels.append(f"{misc.getSystemStr(sys)}")
+            labels.append(f"{sys}")
 
         _sats = [item for item in sats if item.startswith(systems)]
         _sats = [item for item in _sats if item.endswith(tuple([freq[-1] for freq in frequencies]))]
@@ -412,7 +452,11 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
         axs.set_xticks([y for y in range(len(labels))], labels=labels)
         axs.set_xlabel('')
         axs.set_ylabel(ylabel)
-        axs.legend(handles=axs.legend_.legend_handles, labels=frequencies)
+        #axs.legend(handles=axs.legend_.legend_handles, labels=frequencies)
+        axs.get_legend().remove()
+
+        #handles, labels = axs.get_legend_handles_labels()
+        #fig.legend(handles, frequencies, loc='upper right', ncols=len(labels), bbox_to_anchor=(1.0, 0.95), framealpha=1.0) 
 
         axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
         axs.yaxis.set_major_formatter('{x:.0f}')
@@ -424,7 +468,40 @@ def plotStatisticsDataViolin(logs, data_name, ylabel, systems, frequencies, lim,
         # fig.legend(handles, labels=frequencies)
         fig.tight_layout()
 
-        # Reference graph
+        if save is not None:
+            plt.savefig(f"{save}_{log.acronym}.png", dpi=300)
+        
+        log_df_dict[log.acronym] = _df
+        device_list.append(log.acronym)
+
+    # Concat frames
+    df_concate = pd.concat(log_df_dict, names=['device'])
+    df_concate = df_concate.reset_index(level=0)   
+
+    # Global plot for all logs
+    fig, axs = plt.subplots(1, figsize=figsize)
+    sns.violinplot(ax=axs, data=df_concate, x='device', y=data_name, hue='frequency', 
+                       order=device_list, hue_order=frequencies, legend=False,
+                       split=True, orient='v', palette=['#27aeef', '#ef9b20'] , zorder=3)
+    plt.setp(axs.collections, alpha=.7)
+    axs.set_xticks([y + 1 for y in range(len(device_list))], labels=device_list)
+    
+    axs.set_xticks([y for y in range(len(device_list))], labels=device_list)
+    axs.set_xlabel('')
+    axs.set_ylabel(ylabel)
+    #axs.legend(loc='upper left', ncols=len(frequencies)) 
+    axs.get_legend().remove()
+
+    axs.yaxis.set_major_locator(MultipleLocator(major_ticks))
+    axs.yaxis.set_major_formatter('{x:.1f}')
+    axs.yaxis.set_minor_locator(MultipleLocator(minor_ticks))
+    
+    plt.ylim(0, lim)
+    axs.set_axisbelow(True)
+    fig.tight_layout()
+
+    if save is not None:
+        plt.savefig(f"{save}_all.png", dpi=300)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -438,7 +515,7 @@ def plotMeasurement(log, data_name, sat):
     df = log.raw.loc[log.raw['prn'].isin(sat), ['datetime', 'prn', data_name]]
 
     fig, axs = plt.subplots(1, figsize=(6,5))
-    fig.suptitle(f"{data_name} errors ({log.manufacturer} {log.device})")
+    fig.suptitle(f"{data_name} errors ({log.manufacturer} {log.acronym})")
 
     df.groupby('prn')[data_name].plot(x='datetime', y=data_name, ax=axs)
 
@@ -455,7 +532,7 @@ def plotMeasurement(log, data_name, sat):
 # ======================================================================================================================
 # Visibility
 
-def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal'):
+def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal', save=None):
 
     minor_ticks = ticks[0]
     major_ticks = ticks[1]
@@ -466,15 +543,15 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal'):
         column = 'sv'
 
     fig, axs = plt.subplots(1, figsize=(6,5))
-    fig.suptitle(f"Total {mode}s seen per epoch")
+    #fig.suptitle(f"Total {mode}s seen per epoch")
 
     for log in logs:
 
         df = log.raw[['TimeNanos', column]]
         df = df.groupby('TimeNanos').nunique()
-        #df.plot(y='prn', label=log.device, style='o', ms=2, ax=axs)
+        #df.plot(y='prn', label=log.acronym, style='o', ms=2, ax=axs)
         time = np.array(df.index.tolist()) * 1e-9
-        axs.scatter(time - time[0], df[column].tolist(), label=f"{log.manufacturer} {log.device}", marker='.')
+        axs.scatter(time - time[0], df[column].tolist(), label=f"{log.acronym}", marker='.')
 
     axs.xaxis.set_minor_locator(MultipleLocator(minor_ticks))
     axs.xaxis.set_major_locator(MultipleLocator(major_ticks))
@@ -491,17 +568,20 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal'):
 
     #axs.margins(x=0)
 
+    if save is not None:
+        plt.savefig(f"{save}.png", dpi=300)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def statsSatellitesPerSystem(logs):
+def statsSignalsPerSystem(logs, percent=False):
 
     systems = ['G', 'R', 'E', 'C', 'I', 'S', 'J']
     
     df_stats = pd.DataFrame()
     devices = []
     for log in logs:
-        devices.append(log.device)
+        devices.append(log.acronym)
     df_stats['device'] = devices
 
     for sys in systems:
@@ -512,15 +592,48 @@ def statsSatellitesPerSystem(logs):
             sat_ref = log.ref.df[log.ref.df.prn.str.match(rf'{sys}[0-9]{{2,3}}-L.')]['prn'].nunique()
             _bars_dev.append(sat_dev)
             _bars_ref.append(sat_ref)
-        df_stats[f"{sys}"] = _bars_dev
-        df_stats[f"{sys}_ref"] = _bars_ref
+
+        if percent:
+            df_stats[f"{sys}"] = np.array(_bars_dev) / np.array(_bars_ref) * 100
+        else:
+            df_stats[f"{sys}"] = _bars_dev
+            df_stats[f"{sys}_ref"] = _bars_ref
+        
+    return df_stats
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def statsSignalsPerFrequency(logs, percent=False):
+
+    frequencies = ['L1', 'L5']
+    
+    df_stats = pd.DataFrame()
+    devices = []
+    for log in logs:
+        devices.append(log.acronym)
+    df_stats['device'] = devices
+
+    for freq in frequencies:
+        _bars_dev = []
+        _bars_ref = []
+        for log in logs:
+            sat_dev = log.raw[log.raw.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')]['prn'].nunique()
+            sat_ref = log.ref.df[log.ref.df.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')]['prn'].nunique()
+            _bars_dev.append(sat_dev)
+            _bars_ref.append(sat_ref)
+        
+        if percent:
+            df_stats[f"{freq}"] = np.array(_bars_dev) / np.array(_bars_ref) * 100
+        else:
+            df_stats[f"{freq}"] = _bars_dev
+            df_stats[f"{freq}_ref"] = _bars_ref
         
     return df_stats
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotBarSatellitesPerSystem(logs):
+def plotBarSignalsPerSystem(logs, save=None):
 
     width = 0.18
 
@@ -543,7 +656,7 @@ def plotBarSatellitesPerSystem(logs):
 
     # Plot
     fig, axs = plt.subplots(1, figsize=(6,4))
-    fig.suptitle(f"Visible satellites per constellations")
+    #fig.suptitle(f"Signals seen per constellations")
     x = np.arange(len(logs))
 
     colors_ref = ["#82c8f0", "#f5a5c8", "#ffdca5", "#7dcdbe", "#4e008e", "#c3b9d7", "#cf286f"]
@@ -556,51 +669,29 @@ def plotBarSatellitesPerSystem(logs):
             bottom_dev = np.zeros(len(logs))
             bottom_ref = np.zeros(len(logs))
 
-        axs.bar(x-0.1, bars_ref[i], width, bottom=bottom_ref, label=misc.getSystemStr(systems[i]), color=colors_ref[i])
+        axs.bar(x-0.1, bars_ref[i], width, bottom=bottom_ref, label=systems[i], color=colors_ref[i])
         axs.bar(x+0.1, bars_dev[i], width, bottom=bottom_dev, color=colors_dev[i])
     
     devices = []
     for log in logs:
-        devices.append(log.device)
+        devices.append(log.acronym)
     axs.set_xticks(x, devices)
     axs.set_axisbelow(True)
 
-    handles, labels = axs.get_legend_handles_labels()
-    fig.legend(handles, systems, loc='upper right', ncols=len(labels), bbox_to_anchor=(1.0, 0.95), framealpha=1.0) 
+    # handles, labels = axs.get_legend_handles_labels()
+    # fig.legend(handles, systems, loc='upper right', ncols=len(labels), bbox_to_anchor=(1.0, 0.95), framealpha=1.0) 
+
+    plt.legend(bbox_to_anchor=(1.02, 1), borderaxespad=0)
 
     #fig.tight_layout(rect=[0, 0.03, 1, 1])
     fig.tight_layout()
 
-    return 
+    if save is not None:
+        plt.savefig(f"{save}.png", dpi=300)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def statsSatellitesPerFrequency(logs):
-
-    frequencies = ['L1', 'L5']
-    
-    df_stats = pd.DataFrame()
-    devices = []
-    for log in logs:
-        devices.append(log.device)
-    df_stats['device'] = devices
-
-    for freq in frequencies:
-        _bars_dev = []
-        _bars_ref = []
-        for log in logs:
-            sat_dev = log.raw[log.raw.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')]['prn'].nunique()
-            sat_ref = log.ref.df[log.ref.df.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')]['prn'].nunique()
-            _bars_dev.append(sat_dev)
-            _bars_ref.append(sat_ref)
-        df_stats[f"{freq}"] = _bars_dev
-        df_stats[f"{freq}_ref"] = _bars_ref
-        
-    return df_stats
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-def plotBarSatellitesPerFrequency(logs):
+def plotBarSignalsPerFrequency(logs, save=None):
 
     width = 0.18
 
@@ -608,7 +699,7 @@ def plotBarSatellitesPerFrequency(logs):
     frequencies = ['L1', 'L5']
 
     fig, axs = plt.subplots(1, figsize=(6,4))
-    fig.suptitle(f"Visible satellites per constellations")
+    #fig.suptitle(f"Signals seen per frequencies")
     x = np.arange(len(logs))
 
     bars_dev = []
@@ -639,8 +730,13 @@ def plotBarSatellitesPerFrequency(logs):
     
     xticks = []
     for log in logs:
-        xticks.append(log.device)
+        xticks.append(log.acronym)
     axs.set_xticks(x, xticks)
     axs.set_axisbelow(True)
-    axs.legend()
+
+    plt.legend(bbox_to_anchor=(1.20, 1), borderaxespad=0)
+
     fig.tight_layout()
+
+    if save is not None:
+        plt.savefig(f"{save}.png", dpi=300)
