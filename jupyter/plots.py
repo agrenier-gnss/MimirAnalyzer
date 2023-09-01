@@ -630,6 +630,30 @@ def statsSignalsPerFrequency(logs, percent=False):
         
     return df_stats
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+def statsDataPerFrquency(logs, data):
+
+    frequencies = ['L1', 'L5']
+    
+    df_stats = pd.DataFrame()
+    devices = []
+    for log in logs:
+        devices.append(log.acronym)
+    df_stats['device'] = devices
+
+    stats = []
+    for freq in frequencies:
+        stats = []
+        for log in logs:
+            sat_dev = log.raw[log.raw.prn.str.contains(rf'.[0-9]{{2,3}}-{freq}')][data]
+            stats.describe()
+        
+        stats = pd.concat(stats, keys=device_list, axis=1).T
+    stats
+        
+    return df_stats
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
