@@ -206,6 +206,8 @@ def plotMap(locations, extent, scale, marker='', markersize=1):
     
     """
 
+    matplotlib.rcParams.update({'font.size': 10})
+
     def image_spoof(self, tile): # this function pretends not to be a Python script
         url = self._image_url(tile) # get the url of the street map API
         req = Request(url) # start request
@@ -248,6 +250,8 @@ def plotMap(locations, extent, scale, marker='', markersize=1):
 
     plt.legend()
     plt.grid(False)
+
+    matplotlib.rcParams.update({'font.size': 12})
 
 
 # ======================================================================================================================
@@ -542,7 +546,7 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal', save=None):
     elif mode == 'satellite':
         column = 'sv'
 
-    fig, axs = plt.subplots(1, figsize=(6,5))
+    fig, axs = plt.subplots(1, figsize=(6,4))
     #fig.suptitle(f"Total {mode}s seen per epoch")
 
     for log in logs:
@@ -561,12 +565,14 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal', save=None):
     formatter = matplotlib.ticker.FuncFormatter(timeTicks)                                                                                                                                                                                                                         
     axs.xaxis.set_major_formatter(formatter)
     axs.set_axisbelow(True)
-    axs.legend()
     axs.set_ylim(lim[0], lim[1])
     axs.set_xlabel("Duration")
     fig.tight_layout()
 
     #axs.margins(x=0)
+
+    handles, labels = axs.get_legend_handles_labels()
+    fig.legend(labels, loc='upper right', ncols=len(labels), framealpha=1.0) 
 
     if save is not None:
         plt.savefig(f"{save}.png", dpi=300)
@@ -722,7 +728,7 @@ def plotBarSignalsPerFrequency(logs, save=None):
     #systems = ['G', 'R', 'E', 'C', 'I', 'S', 'J']
     frequencies = ['L1', 'L5']
 
-    fig, axs = plt.subplots(1, figsize=(6,4))
+    fig, axs = plt.subplots(1, figsize=(6,3.5))
     #fig.suptitle(f"Signals seen per frequencies")
     x = np.arange(len(logs))
 

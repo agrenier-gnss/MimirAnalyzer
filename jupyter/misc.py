@@ -126,7 +126,7 @@ def filterValues(df, data_name, value):
     df = df[df[data_name].abs() < value]
     size_after_filter = len(df)
     diff = size_before_filter - size_after_filter
-    print(f"Rows removed {diff} ({diff / (size_before_filter)*100:.3f}%)")
+    print(f"Rows removed {diff: <4} ({diff / (size_before_filter)*100:.3f}% - {100 - diff / (size_before_filter)*100: >8.2f}%)")
 
     return df
 
