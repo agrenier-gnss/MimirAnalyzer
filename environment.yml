@@ -18,7 +18,9 @@ dependencies:
   - brotli-bin=1.0.9=h5eee18b_7
   - brotlipy=0.7.0=py311h5eee18b_1002
   - bzip2=1.0.8=h7b6447c_0
+  - c-ares=1.19.0=h5eee18b_0
   - ca-certificates=2023.7.22=hbcca054_0
+  - cartopy=0.21.1=py311h1176785_0
   - certifi=2023.7.22=pyhd8ed1ab_0
   - cffi=1.15.1=py311h5eee18b_3
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
@@ -33,6 +35,7 @@ dependencies:
   - folium=0.14.0=pyhd8ed1ab_0
   - fonttools=4.25.0=pyhd3eb1b0_0
   - freetype=2.12.1=h4a9f257_0
+  - geos=3.8.0=he6710b0_0
   - giflib=5.2.1=h5eee18b_3
   - holoviews=1.17.0=py311h06a4308_0
   - hvplot=0.8.4=py311h06a4308_0
@@ -48,18 +51,24 @@ dependencies:
   - jupyter_client=8.3.0=pyhd8ed1ab_0
   - jupyter_core=5.3.1=py311h38be061_0
   - kiwisolver=1.4.4=py311h6a678d5_0
+  - krb5=1.20.1=h143b758_1
   - lcms2=2.12=h3be6417_0
   - ld_impl_linux-64=2.38=h1181459_1
   - lerc=3.0=h295c915_0
   - libbrotlicommon=1.0.9=h5eee18b_7
   - libbrotlidec=1.0.9=h5eee18b_7
   - libbrotlienc=1.0.9=h5eee18b_7
+  - libcurl=8.1.1=h251f7ec_2
   - libdeflate=1.17=h5eee18b_0
+  - libedit=3.1.20221030=h5eee18b_0
+  - libev=4.33=h516909a_1
   - libffi=3.4.4=h6a678d5_0
   - libgcc-ng=11.2.0=h1234567_1
   - libgomp=11.2.0=h1234567_1
+  - libnghttp2=1.52.0=h2d74bed_1
   - libpng=1.6.39=h5eee18b_0
   - libsodium=1.0.18=h36c2ea0_1
+  - libssh2=1.10.0=hdbd6064_2
   - libstdcxx-ng=11.2.0=h1234567_1
   - libtiff=4.5.0=h6a678d5_2
   - libuuid=1.41.5=h5eee18b_0
@@ -95,6 +104,7 @@ dependencies:
   - pillow=9.4.0=py311h6a678d5_0
   - pip=23.1.2=py311h06a4308_0
   - platformdirs=3.10.0=pyhd8ed1ab_0
+  - proj=8.2.1=ha227179_0
   - prompt-toolkit=3.0.39=pyha770c72_0
   - prompt_toolkit=3.0.39=hd8ed1ab_0
   - psutil=5.9.0=py311h5eee18b_0
@@ -106,6 +116,8 @@ dependencies:
   - pymap3d=3.0.1=pyhd8ed1ab_1
   - pyopenssl=23.2.0=py311h06a4308_0
   - pyparsing=3.0.9=py311h06a4308_0
+  - pyproj=3.4.1=py311h93e2b2c_0
+  - pyshp=2.3.1=pyhd8ed1ab_0
   - pysocks=1.7.1=py311h06a4308_0
   - python=3.11.4=h955ad1f_0
   - python-dateutil=2.8.2=pyhd8ed1ab_0
@@ -118,6 +130,7 @@ dependencies:
   - requests=2.31.0=py311h06a4308_0
   - seaborn=0.12.2=py311h06a4308_0
   - setuptools=67.8.0=py311h06a4308_0
+  - shapely=2.0.1=py311h24a2a10_0
   - six=1.16.0=pyh6c4a22f_0
   - sqlite=3.41.2=h5eee18b_0
   - stack_data=0.6.2=pyhd8ed1ab_0
@@ -141,4 +154,11 @@ dependencies:
   - zipp=3.16.2=pyhd8ed1ab_0
   - zlib=1.2.13=h5eee18b_0
   - zstd=1.5.5=hc292b87_0
+  - pip:
+      - georinex==1.16.1
+      - hatanaka==2.8.1
+      - importlib-resources==6.0.1
+      - ncompress==1.0.1
+      - unlzw3==0.2.2
+      - xarray==2023.7.0
 prefix: /home/vmangr/miniconda3/envs/mimir_env
