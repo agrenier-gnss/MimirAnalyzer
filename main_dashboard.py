@@ -6,6 +6,7 @@ from logparser import LogReader, PosReader
 from dashboard.grids import getMapGrid, getCoordinateGrid, getDifferenceGrid, getGnssMeasurementGrid
 from dashboard.grids import getImuMeasurementGrid, getHealthGrid
 
+# Command to launch the panel server
 # panel serve main_dashboard.py --show --autoreload
 
 # =============================================================================
