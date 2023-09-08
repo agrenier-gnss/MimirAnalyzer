@@ -84,7 +84,7 @@ def plotENU(logs, lim, yticks, xticks, mode='reference', save=None):
     formatter = matplotlib.ticker.FuncFormatter(timeTicks)                                                                                                                                                                                                                         
     axs[2].xaxis.set_major_formatter(formatter)
 
-    plt.xlabel('Duration')
+    plt.xlabel('Duration [min]')
 
     axs[0].margins(x=0)
     axs[1].margins(x=0)
@@ -175,7 +175,7 @@ def plotStatisticsENU(logs, lim, ticks, mode='violin'):
 
         axs.set_title(f"{log.manufacturer} {log.acronym}")
         
-        pos = log.diff[["east", "north", "up"]].dropna()
+        pos = log.diff.loc[log.diff['provider'].isin(['GPS']), ["east", "north", "up"]].dropna()
         data = [pos['east'], pos['north'], pos['up']]
 
         if mode == 'violin':
@@ -566,7 +566,7 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal', save=None):
     axs.xaxis.set_major_formatter(formatter)
     axs.set_axisbelow(True)
     axs.set_ylim(lim[0], lim[1])
-    axs.set_xlabel("Duration")
+    axs.set_xlabel("Duration [min]")
     fig.tight_layout()
 
     #axs.margins(x=0)
@@ -685,7 +685,7 @@ def plotBarSignalsPerSystem(logs, save=None):
         bars_ref.append(_bars_ref)
 
     # Plot
-    fig, axs = plt.subplots(1, figsize=(6,4))
+    fig, axs = plt.subplots(1, figsize=(6,3))
     #fig.suptitle(f"Signals seen per constellations")
     x = np.arange(len(logs))
 
@@ -728,7 +728,7 @@ def plotBarSignalsPerFrequency(logs, save=None):
     #systems = ['G', 'R', 'E', 'C', 'I', 'S', 'J']
     frequencies = ['L1', 'L5']
 
-    fig, axs = plt.subplots(1, figsize=(6,3.5))
+    fig, axs = plt.subplots(1, figsize=(6,3))
     #fig.suptitle(f"Signals seen per frequencies")
     x = np.arange(len(logs))
 
