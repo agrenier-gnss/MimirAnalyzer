@@ -4,7 +4,7 @@ import pandas as pd
 
 import georinex as gr
 
-import misc
+#import misc
 
 # =====================================================================================================================
 
@@ -153,6 +153,13 @@ class LogReader():
                         else:
                             health.append(mdict)
 
+                    case "GAL":
+                        mdict = self.getHealthDictionnary(line)
+                        if mdict is None:
+                            print(f"Warning: Line {i} skipped with invalid values for 'PPG'")
+                        else:
+                            health.append(mdict)
+
                     case "ACC":
                         mdict = self.getMotionDictionnary(line)
                         if mdict is None:
@@ -184,26 +191,30 @@ class LogReader():
                 i += 1
         
         # Convert to dataframes
-        self.fix = pd.DataFrame(fix)
-        self.fix.set_index('datetime', inplace=True)
-        self.raw = pd.DataFrame(raw)
-        self.raw.set_index('datetime', inplace=True)
+        if fix:
+            self.fix = pd.DataFrame(fix)
+            self.fix.set_index('datetime', inplace=True)
+        if fix:
+            self.raw = pd.DataFrame(raw)
+            self.raw.set_index('datetime', inplace=True)
+            dt = self.raw.groupby('prn')['TimeNanos'].diff().values * 1e-9
+
+            doppler = self.raw.groupby('prn')['PseudorangeRateMetersPerSecond'].diff().div(dt, axis=0,)
+            self.raw['DopplerError'] = doppler
+            
+            phases = self.raw.groupby('prn')['AccumulatedDeltaRangeMeters'].diff().div(dt, axis=0,)
+            self.raw['PhaseVelocity'] = phases
+            self.raw['PhaseError'] = self.raw.groupby('prn')['PhaseVelocity'].diff().div(dt, axis=0,)
+
+            self.raw['PhaseMinusDoppler'] = self.raw['PhaseVelocity'] - self.raw['PseudorangeRateMetersPerSecond']
         self.health = pd.DataFrame(health)
         self.motion = pd.DataFrame(motion)
         self.env = pd.DataFrame(env)
 
         # Compute some additional entries
         #self.raw = self.raw.sort_values(by=['prn', 'TimeNanos'])
-        dt = self.raw.groupby('prn')['TimeNanos'].diff().values * 1e-9
 
-        doppler = self.raw.groupby('prn')['PseudorangeRateMetersPerSecond'].diff().div(dt, axis=0,)
-        self.raw['DopplerError'] = doppler
-        
-        phases = self.raw.groupby('prn')['AccumulatedDeltaRangeMeters'].diff().div(dt, axis=0,)
-        self.raw['PhaseVelocity'] = phases
-        self.raw['PhaseError'] = self.raw.groupby('prn')['PhaseVelocity'].diff().div(dt, axis=0,)
 
-        self.raw['PhaseMinusDoppler'] = self.raw['PhaseVelocity'] - self.raw['PseudorangeRateMetersPerSecond']
 
         #self.raw.replace([np.inf, -np.inf], np.nan, inplace=True)
 

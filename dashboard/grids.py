@@ -284,7 +284,7 @@ def getHealthGrid(log : LogReader):
     reset_button = pn.widgets.Button(name='Reset', button_type='primary')
     healthCheckButton = pn.widgets.RadioButtonGroup(name='type', 
                                                           value='ECG', 
-                                                          options=['ECG', 'PPG'], 
+                                                          options=['ECG', 'PPG', 'GAL'], 
                                                           button_type='primary')
     
     dfi_raw = hvplot.bind(selectHealthMeasurement, reset_button, log, meas_select, healthCheckButton).interactive()
