@@ -103,6 +103,12 @@ def get3DError(east, north, up):
     error = np.sqrt(north**2 + east**2 + up**2)
     return {"2D_error":error}
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+def get2DRMSE(east, north):
+    error = np.sqrt(np.mean(east**2 + north**2))
+    return error
+
 # ======================================================================================================================
 
 def filterPercentile(df, data_name, percentile):

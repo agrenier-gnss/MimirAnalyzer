@@ -14,9 +14,10 @@ from dashboard.grids import getImuMeasurementGrid, getHealthGrid
 
 #filepath = ".data/health/log_mimir_20230211195331.txt"
 filepath = ".data/health/log_mimir_20230520212608.txt"
-filepath = ".data/health/log_mimir_20231108092720.txt"
-filepath = ".data/health/log_mimir_20231108093047.txt"
-filepath = ".data/health/log_mimir_20230715122058.txt"
+#filepath = ".data/health/log_mimir_20231108092720.txt"
+#filepath = ".data/health/log_mimir_20231108093047.txt"
+#filepath = ".data/health/log_mimir_20230715122058.txt"
+#filepath = ".data/health/log_mimir_20231108095114.txt"
 
 log = LogReader('test', 'test', 'test', filepath, mode='mimir', specifiedTags= ["ECG", "PPG", "GAL"])
 
