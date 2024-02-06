@@ -101,12 +101,12 @@ def plotDiff(log, reset_button, providersCheckButtons_A, providersCheckButtons_B
 
     # Align 
     pos_A = log.fix.loc[log.fix['provider'].isin([providersCheckButtons_A]), 
-                      ['datetime', 'latitude', 'longitude', 'altitude']]
+                      ['latitude', 'longitude', 'altitude']]
     pos_B = log.fix.loc[log.fix['provider'].isin([providersCheckButtons_B]), 
-                      ['datetime', 'latitude', 'longitude', 'altitude']]
+                      ['latitude', 'longitude', 'altitude']]
 
-    pos_A = pos_A.set_index('datetime')
-    pos_B = pos_B.set_index('datetime')
+    # pos_A = pos_A.set_index('datetime')
+    # pos_B = pos_B.set_index('datetime')
 
     ref_enu = pos_A.iloc[0].tolist()[0:4]
 
@@ -248,7 +248,7 @@ def selectGnssMeasurement(reset_button, log, meas, gps_svid, glo_svid, gal_svid,
         df = df.explode('State_split')
         df.rename(columns={"State_split":"measurement"}, inplace=True)
     else:
-        df = log.raw.loc[log.raw['prn'].isin(selected_prn), [meas, 'prn', 'timestamp', 'datetime']]
+        df = log.raw.loc[log.raw['prn'].isin(selected_prn), [meas, 'prn', 'timestamp']]
         df.rename(columns={meas:"measurement"}, inplace=True)
     return df
 
@@ -358,7 +358,7 @@ def selectImuMeasurement(reset_button, log, meas, healthCheckButton):
 # =====================================================================================================================
 # MAP GRID
 
-color_map = {'GPS':'blue', 'gps':'blue', 'FLP':'red', 'NLP':'green', 'REF':'purple'}
+color_map = {'GPS':'blue', 'gps':'blue', 'FLP':'red', 'NLP':'green', 'REF':'purple', 'FUSED':'pink'}
 
 # -----------------------------------------------------------------------------
 

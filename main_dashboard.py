@@ -39,7 +39,9 @@ filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Google_PixelWatch/log
 
 filepath="./.data/2023_Dataset_Hervanta/S2_dynamic_campus/raw/log_GooglePixel7_20230801110405_modified.txt"
 
-log = LogReader('test', 'test', filepath, mode='mimir')
+filepath="/mnt/c/Users/Antoine/OneDrive - TUNI.fi/Data/Android/_tests/log_mimir_20240205122020.txt"
+
+log = LogReader('test', 'test', 'test', filepath, mode='mimir')
 
 referenceEnabled = False
 filepath_ref = "./example_data/NMND18410025C_2023-04-14_13-03-45.pos"
@@ -49,8 +51,8 @@ if referenceEnabled:
     _df = pd.concat([log.fix, ref.pos], ignore_index=True)
     log.fix = _df 
 
-healthEnabled = False
-imuEnabled = False
+healthEnabled = True
+imuEnabled = True
 
 # =============================================================================
 # Tabs

@@ -94,7 +94,11 @@ class LogReader():
         self.manufacturer = manufacturer
         self.device = device
         self.acronym = acronym
-        self.specifiedTags = specifiedTags
+        if specifiedTags:
+            self.specifiedTags = specifiedTags
+        else:
+            self.specifiedTags = ["Fix", "Raw", "ACC", "ACC_UNCAL", "GYR", "GYR_UNCAL", "MAG_UNCAL",
+            "MAG", "ECG", "PPG", "GAL", "PSR"]
         self.mode = mode
 
         self.load(filepath)
@@ -160,21 +164,21 @@ class LogReader():
                         else:
                             health.append(mdict)
 
-                    case "ACC":
+                    case "ACC" | "ACC_UNCAL":
                         mdict = self.getMotionDictionnary(line)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'ACC'")
                         else:
                             motion.append(mdict)
                     
-                    case "GYR":
+                    case "GYR" | "GYR_UNCAL":
                         mdict = self.getMotionDictionnary(line)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'GYR'")
                         else:
                             motion.append(mdict)
                     
-                    case "MAG":
+                    case "MAG" | "MAG_UNCAL":
                         mdict = self.getMotionDictionnary(line)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'MAG'")
@@ -194,7 +198,7 @@ class LogReader():
         if fix:
             self.fix = pd.DataFrame(fix)
             self.fix.set_index('datetime', inplace=True)
-        if fix:
+        if raw:
             self.raw = pd.DataFrame(raw)
             self.raw.set_index('datetime', inplace=True)
             dt = self.raw.groupby('prn')['TimeNanos'].diff().values * 1e-9

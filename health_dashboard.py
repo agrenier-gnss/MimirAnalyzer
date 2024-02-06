@@ -19,6 +19,9 @@ filepath = ".data/health/log_mimir_20230520212608.txt"
 #filepath = ".data/health/log_mimir_20230715122058.txt"
 #filepath = ".data/health/log_mimir_20231108095114.txt"
 
+filepath = "/mnt/c/Users/Antoine/OneDrive - TUNI.fi/Data/Android/_tests/log_mimir_20240205185606.txt"
+filepath = "/mnt/c/Users/Antoine/OneDrive - TUNI.fi/Data/Android/_tests/log_mimir_20240205181707.txt"
+
 log = LogReader('test', 'test', 'test', filepath, mode='mimir', specifiedTags= ["ECG", "PPG", "GAL"])
 
 # =============================================================================
