@@ -4,6 +4,7 @@ import numpy as np
 from bokeh.models.formatters import DatetimeTickFormatter
 import pymap3d as pm
 import folium
+import pandas as pd
 
 from logparser import LogReader
 
@@ -318,7 +319,7 @@ def selectHealthMeasurement(reset_button, log, meas, healthCheckButton):
 
 def getImuMeasurementGrid(log : LogReader):
 
-    measurementsOptions = log.motion.columns.values.tolist()
+    measurementsOptions = [meas for meas in log.motion.columns.values.tolist() if 'uncal' not in meas] # To remove the uncalibrated
     measurementsOptions.sort()
 
     # Define widgets
@@ -329,8 +330,9 @@ def getImuMeasurementGrid(log : LogReader):
                                                 value='ACC', 
                                                 options=['ACC', 'GYR', 'MAG'], 
                                                 button_type='primary')
+    checkboxUncalibrated = pn.widgets.CheckBoxGroup(name="checkboxUncalibrated", options=["Uncalibrated"], value=["Uncalibrated"], inline=True)
     
-    dfi_raw = hvplot.bind(selectImuMeasurement, reset_button, log, meas_select, imuCheckButton).interactive()
+    dfi_raw = hvplot.bind(selectImuMeasurement, reset_button, log, meas_select, imuCheckButton, checkboxUncalibrated).interactive()
 
     date_formatter = DatetimeTickFormatter(minutes='%H:%M')
     plot_opts = dict(
@@ -339,20 +341,30 @@ def getImuMeasurementGrid(log : LogReader):
          grid=True, 
          responsive=True)
     meas_grid = pn.GridSpec(wsizing_mode='stretch_both')
-    meas_grid[:1, :1] = dfi_raw.hvplot(x="datetime", y='measurement', kind=kind_widget, **plot_opts).output()
+    meas_grid[:1, :1] = dfi_raw.hvplot(x="datetime", y='measurement', by="calibration", kind=kind_widget, **plot_opts).output()
     #gnssmeasGrid[:1, :3] = dfi_sine.hvplot(title='Sine', **plot_opts).output()
 
-    return pn.Column(reset_button, meas_grid), [imuCheckButton, meas_select, kind_widget]
+    return pn.Column(reset_button, meas_grid), [imuCheckButton, checkboxUncalibrated, meas_select, kind_widget]
 
 # -----------------------------------------------------------------------------
 
 # Bind plot callback
-def selectImuMeasurement(reset_button, log, meas, healthCheckButton):
+def selectImuMeasurement(reset_button, log, meas, imuCheckButton, checkboxUncalibrated):
+
+    if checkboxUncalibrated:
+        df1 = log.motion.loc[log.motion['sensor'].isin([f'{imuCheckButton}_UNCAL']), [meas, 'timestamp', 'datetime']]
+        df1['calibration'] = "Uncalibrated"
+        df1.rename(columns={meas:"measurement"}, inplace=True)
+        df2 = log.motion.loc[log.motion['sensor'].isin([f'{imuCheckButton}']), [meas, 'timestamp', 'datetime']]
+        df2['calibration'] = "Calibrated"
+        df2.rename(columns={f'{meas}':"measurement"}, inplace=True)
+        df = pd.concat([df1, df2], ignore_index=True) 
+    else:
+        df = log.motion.loc[log.motion['sensor'].isin([imuCheckButton]), [meas, 'timestamp', 'datetime']]
+        df.rename(columns={meas:"measurement"}, inplace=True)
     
-    # Satellite selection
-    df = log.motion.loc[log.motion['sensor'].isin([healthCheckButton]), [meas, 'timestamp', 'datetime']]
-    df.rename(columns={meas:"measurement"}, inplace=True)
-    
+    print(df)
+
     return df
 
 # =====================================================================================================================

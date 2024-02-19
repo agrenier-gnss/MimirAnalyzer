@@ -164,24 +164,45 @@ class LogReader():
                         else:
                             health.append(mdict)
 
-                    case "ACC" | "ACC_UNCAL":
+                    case "ACC":
                         mdict = self.getMotionDictionnary(line)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'ACC'")
                         else:
                             motion.append(mdict)
                     
-                    case "GYR" | "GYR_UNCAL":
+                    case "ACC_UNCAL":
+                        mdict = self.getMotionUncalibratedDictionnary(line)
+                        if mdict is None:
+                            print(f"Warning: Line {i} skipped with invalid values for 'ACC_UNCAL'")
+                        else:
+                            motion.append(mdict)
+
+                    case "GYR":
                         mdict = self.getMotionDictionnary(line)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'GYR'")
                         else:
                             motion.append(mdict)
                     
-                    case "MAG" | "MAG_UNCAL":
+                    case "GYR_UNCAL":
+                        mdict = self.getMotionUncalibratedDictionnary(line)
+                        if mdict is None:
+                            print(f"Warning: Line {i} skipped with invalid values for 'GYR_UNCAL'")
+                        else:
+                            motion.append(mdict)
+                    
+                    case "MAG":
                         mdict = self.getMotionDictionnary(line)
                         if mdict is None:
                             print(f"Warning: Line {i} skipped with invalid values for 'MAG'")
+                        else:
+                            motion.append(mdict)
+
+                    case "MAG_UNCAL":
+                        mdict = self.getMotionUncalibratedDictionnary(line)
+                        if mdict is None:
+                            print(f"Warning: Line {i} skipped with invalid values for 'MAG_UNCAL'")
                         else:
                             motion.append(mdict)
 
@@ -333,6 +354,29 @@ class LogReader():
                 "x"              : float(line[3]),
                 "y"              : float(line[4]),
                 "z"              : float(line[5])
+            }
+            
+        except ValueError:
+            return
+        
+        return mdict
+    
+    # -----------------------------------------------------------------------------------------------------------------
+
+    def getMotionUncalibratedDictionnary(self, line):
+
+        try: 
+            mdict = {
+                "sensor"         : line[0],
+                "timestamp"      : float(line[1])/1e3,
+                "datetime"       : np.datetime64(int(line[1]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+                "elapsedRealtime": int(line[2]),
+                "x"              : float(line[3]),
+                "y"              : float(line[4]),
+                "z"              : float(line[5]),
+                "x_uncal"        : float(line[6]),
+                "y_uncal"        : float(line[7]),
+                "z_uncal"        : float(line[8])
             }
             
         except ValueError:
