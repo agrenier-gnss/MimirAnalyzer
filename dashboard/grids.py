@@ -352,25 +352,26 @@ def getImuMeasurementGrid(log : LogReader):
 def selectImuMeasurement(reset_button, log, meas, imuCheckButton, checkboxUncalibrated):
 
     if checkboxUncalibrated:
-        df1 = log.motion.loc[log.motion['sensor'].isin([f'{imuCheckButton}_UNCAL']), [meas, 'timestamp', 'datetime']]
+        df1 = log.motion.loc[log.motion['sensor'].isin([f'{imuCheckButton}_UNCAL']), [meas, f'{meas}_uncal', 'timestamp', 'datetime']]
+        df1['corrected'] = df1[meas] - df1[f'{meas}_uncal']
         df1['calibration'] = "Uncalibrated"
-        df1.rename(columns={meas:"measurement"}, inplace=True)
+        df1 = df1.drop(columns=[meas, f'{meas}_uncal'])
+        df1.rename(columns={'corrected':"measurement"}, inplace=True)
         df2 = log.motion.loc[log.motion['sensor'].isin([f'{imuCheckButton}']), [meas, 'timestamp', 'datetime']]
         df2['calibration'] = "Calibrated"
         df2.rename(columns={f'{meas}':"measurement"}, inplace=True)
         df = pd.concat([df1, df2], ignore_index=True) 
     else:
         df = log.motion.loc[log.motion['sensor'].isin([imuCheckButton]), [meas, 'timestamp', 'datetime']]
+        df['calibration'] = "Calibrated"
         df.rename(columns={meas:"measurement"}, inplace=True)
-    
-    print(df)
 
     return df
 
 # =====================================================================================================================
 # MAP GRID
 
-color_map = {'GPS':'blue', 'gps':'blue', 'FLP':'red', 'NLP':'green', 'REF':'purple', 'FUSED':'pink'}
+color_map = {'GPS':'blue', 'gps':'blue', 'FLP':'red', 'NLP':'green', 'REF':'purple', 'FUSED':'orange'}
 
 # -----------------------------------------------------------------------------
 

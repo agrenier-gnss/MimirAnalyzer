@@ -262,7 +262,7 @@ class LogReader():
                 mdict = {
                     "provider" : line[1].upper(),
                     "timestamp": float(line[7])/1e3,
-                    'datetime' : np.datetime64(int(line[7]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+                    'datetime' : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
                     "latitude" : float(line[2]),
                     "longitude": float(line[3]),
                     "altitude" : float(line[4]) if line[4] != "" else float("nan"),

@@ -37,11 +37,12 @@ filepath = "./.data/2023_Dataset_Hervanta/3_dynamic_campus/Google_PixelWatch/log
 
 # filepath="./.data/2023_Dataset_Hervanta/S1_static/raw/log_GooglePixel7_20230217095501.txt"
 
-filepath="./.data/2023_Dataset_Hervanta/S2_dynamic_campus/raw/log_GooglePixel7_20230801110405_modified.txt"
-
+# filepath="./.data/2023_Dataset_Hervanta/S2_dynamic_campus/raw/log_GooglePixel7_20230801110405_modified.txt"
 filepath="/mnt/c/Users/Antoine/OneDrive - TUNI.fi/Data/Android/_tests/log_mimir_20240205122020.txt"
 
-log = LogReader('test', 'test', 'test', filepath, mode='mimir')
+#filepath="/mnt/c/Users/Antoine/OneDrive - TUNI.fi/Data/log_mimir_20230814145154.txt"
+
+log = LogReader('test', 'test', 'test', filepath, mode='old')
 
 referenceEnabled = False
 filepath_ref = "./example_data/NMND18410025C_2023-04-14_13-03-45.pos"
