@@ -42,6 +42,12 @@ filepath="/mnt/c/Users/Antoine/OneDrive - TUNI.fi/Data/Android/_tests/log_mimir_
 
 #filepath="/mnt/c/Users/Antoine/OneDrive - TUNI.fi/Data/log_mimir_20230814145154.txt"
 
+filepath="/mnt/c/Users/vmangr/OneDrive - TUNI.fi/Shared/GEOLOC/dataset/20230313/open_sky_iffstar/GP7/log_mimir_20240313111400.txt"
+
+filepath="/mnt/c/Users/vmangr/OneDrive - TUNI.fi/Shared/GEOLOC/dataset/.archive/20240314/A52/log_mimir_20240314114638.txt"
+
+filepath="/mnt/c/Users/vmangr/Documents/Datasets/AndroidDevices/dataset_GEOLOC_20240319/dataset/.archive/20240313/SW6/log_mimir_20231114215734.txt"
+
 log = LogReader('test', 'test', 'test', filepath, mode='old')
 
 referenceEnabled = False
@@ -52,7 +58,7 @@ if referenceEnabled:
     _df = pd.concat([log.fix, ref.pos], ignore_index=True)
     log.fix = _df 
 
-healthEnabled = True
+healthEnabled = False
 imuEnabled = True
 
 # =============================================================================

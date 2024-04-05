@@ -13,12 +13,9 @@ from PIL import Image
 import pandas as pd
 import datetime
 
-
 import seaborn as sns
 
-import misc
-
-plt.style.use('plot_style.mplstyle')
+#plt.style.use('plot_style.mplstyle')
 
 CM_TO_INCH = 1/2.54
         
@@ -222,7 +219,7 @@ def plotMap(locations, extent, scale, marker='', markersize=1):
     cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
     osm_img = cimgt.OSM() # spoofed, downloaded street map
 
-    fig = plt.figure(figsize=(6,6)) # open matplotlib figure
+    fig = plt.figure(figsize=(8,8)) # open matplotlib figure
     ax1 = plt.axes(projection=osm_img.crs) # project using coordinate reference system (CRS) of street map
     ax1.set_extent(extent) # set extents
 

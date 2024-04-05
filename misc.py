@@ -2,6 +2,7 @@
 import numpy as np
 import pymap3d as pm
 from datetime import timedelta
+import pandas as pd
 # ======================================================================================================================
 
 GnssState_Str = {
@@ -108,6 +109,39 @@ def get3DError(east, north, up):
 def get2DRMSE(east, north):
     error = np.sqrt(np.mean(east**2 + north**2))
     return error
+
+def getENUErrors(logs, ref_enu):
+    stats = []
+    device_list = []
+    for log in logs:
+        device_list.append(log.acronym)
+        # Convert to ENU based on reference
+        log.fix[["east", "north", "up"]] = log.fix.apply(
+            lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
+            axis='columns', result_type='expand')
+        
+        log.pos.df[["east", "north", "up"]] = log.pos.df.apply(
+            lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
+            axis='columns', result_type='expand')
+
+        # Align/interpolates dataframes
+        pos_A, pos_B = log.fix[["provider", "east", "north", "up"]].align(log.pos.df[["east", "north", "up"]])
+        log.diff = pos_B.interpolate(method='time') - pos_A.interpolate(method='time')
+        log.diff.dropna(how='all', inplace=True)
+        
+        log.diff[["2D_error"]] = log.diff.apply(
+            lambda row: getHorizontalError(row['east'], row['north']), 
+            axis='columns', result_type='expand')
+        
+        log.diff[["3D_error"]] = log.diff.apply(
+            lambda row: get3DError(row['east'], row['north'], row['up']), 
+            axis='columns', result_type='expand')
+
+        df = log.diff[["east", "north", "up", '2D_error', '3D_error']].dropna().describe(percentiles=[0.5])
+        stats.append(df.T[['mean', 'std']])
+    stats = pd.concat(stats, keys=device_list, axis=1).T.applymap(lambda x: f"{x:0.3f}")
+    
+    return logs, stats
 
 # ======================================================================================================================
 

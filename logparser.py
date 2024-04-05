@@ -122,8 +122,9 @@ class LogReader():
 
         with open(filepath) as file:
             i = 0
-            for line in file:
-                line = file.readline().strip().split(",")
+            for _line in file:
+                line = _line.strip().split(",")
+                #line = file.readline().strip().split(",")
 
                 if self.specifiedTags and line[0] not in self.specifiedTags:
                     continue
@@ -257,6 +258,9 @@ class LogReader():
                     "latitude" : float(line[2]),
                     "longitude": float(line[3]),
                     "altitude" : float(line[4]) if line[4] != "" else float("nan"),
+                    "unixTime" : float(line[8]),
+                    "elapsedTime" : float(line[11]),
+                    "elapsedTimeUncertainty" : float(line[13])
                 }
             elif mode in 'old':
                 mdict = {
@@ -266,6 +270,9 @@ class LogReader():
                     "latitude" : float(line[2]),
                     "longitude": float(line[3]),
                     "altitude" : float(line[4]) if line[4] != "" else float("nan"),
+                    "unixTime" : float(line[8]),
+                    "elapsedTime" : float(line[11]),
+                    "elapsedTimeUncertainty" : float(line[13])
                 }
 
         except ValueError:
@@ -374,9 +381,9 @@ class LogReader():
                 "x"              : float(line[3]),
                 "y"              : float(line[4]),
                 "z"              : float(line[5]),
-                "x_uncal"        : float(line[6]),
-                "y_uncal"        : float(line[7]),
-                "z_uncal"        : float(line[8])
+                "x_bias"         : float(line[6]),
+                "y_bias"         : float(line[7]),
+                "z_bias"         : float(line[8])
             }
             
         except ValueError:
