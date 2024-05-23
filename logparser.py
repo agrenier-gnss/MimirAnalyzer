@@ -254,7 +254,7 @@ class LogReader():
                 mdict = {
                     "provider" : line[1].upper(),
                     "timestamp": float(line[8])/1e3,
-                    'datetime' : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+                    "datetime" : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
                     "latitude" : float(line[2]),
                     "longitude": float(line[3]),
                     "altitude" : float(line[4]) if line[4] != "" else float("nan"),
@@ -266,7 +266,7 @@ class LogReader():
                 mdict = {
                     "provider" : line[1].upper(),
                     "timestamp": float(line[7])/1e3,
-                    'datetime' : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
+                    "datetime" : np.datetime64(int(line[8]), 'ms'), # datetime.fromtimestamp(float(line[8])/1e3),
                     "latitude" : float(line[2]),
                     "longitude": float(line[3]),
                     "altitude" : float(line[4]) if line[4] != "" else float("nan"),
@@ -295,22 +295,25 @@ class LogReader():
             mdict = {}
             i = 0
             for key in keys:
-                if line[i] == '':
-                    mdict[key] = float("nan")
-                else:
-                    match key:
-                        case "Raw":
-                            pass
-                        case "timestamp":
-                            mdict["timestamp"] = float(line[i])/1e3
-                            mdict["datetime"]  = np.datetime64(int(line[i]), 'ms')
-                        case "Svid" | "ConstellationType" | "State" | "AccumulatedDeltaRangeState":
-                            mdict[key] = int(line[i])
-                        case "CodeType":
-                            mdict["CodeType"] = line[i]
-                        case _:
-                            mdict[key] = float(line[i])
-                i += 1
+                try:
+                    if line[i] == '':
+                        mdict[key] = float("nan")
+                    else:
+                        match key:
+                            case "Raw":
+                                pass
+                            case "timestamp":
+                                mdict["timestamp"] = float(line[i])/1e3
+                                mdict["datetime"]  = np.datetime64(int(line[i]), 'ms')
+                            case "Svid" | "ConstellationType" | "State" | "AccumulatedDeltaRangeState":
+                                mdict[key] = int(line[i])
+                            case "CodeType":
+                                mdict["CodeType"] = line[i]
+                            case _:
+                                mdict[key] = float(line[i])
+                    i += 1
+                except IndexError:
+                    print("Error index")
             
             prn  = f"{self.getSystemLetter(mdict['ConstellationType'])}{mdict['Svid']:02d}"
             freq = f"{self.getFrequencyLabel(mdict['CarrierFrequencyHz'])}"
@@ -581,8 +584,10 @@ class PosReader():
 
 def buildPRN(sv, signal):
 
-    if '1' in signal or '2' in signal:
+    if '1' in signal:
         frequency = 'L1'
+    elif '2' in signal:
+        frequency = 'L2'
     elif '5':
         frequency = 'L5'
 
@@ -605,8 +610,10 @@ class RinexReader():
         self.df = self.xa.to_dataframe().dropna(how='all').reset_index().set_index('time')
 
         # Re-organising the dataframe
+        str = self.df.columns.to_list()
+        str.remove('sv')
         df = pd.melt(
-            self.df, id_vars=['sv'], value_vars=meas, var_name='type', 
+            self.df, id_vars=['sv'], value_vars=str, var_name='type', 
             value_name='value', ignore_index=False).sort_index().sort_values('sv', kind='mergesort')
         df['signal'] = df['type'].str[1:]
         df = df.dropna()
@@ -620,15 +627,15 @@ class RinexReader():
         df[["prn", "system", "frequency"]] = df.apply(lambda row: buildPRN(row['sv'], row['signal']), axis='columns', result_type='expand')
         self.df = df
 
-        # Computing the errors
-        try:
-            self.df[f"pseudorange_rate"] = self.df.groupby(['prn', 'signal'])['pseudorange'].diff().div(sampling, axis=0,)
-            self.df[f"pseudorange_error"] = self.df.groupby(['prn', 'signal'])['pseudorange_rate'].diff().div(sampling, axis=0,)
-            self.df[f"phase_rate"] = self.df.groupby(['prn', 'signal'])['phase'].diff().div(sampling, axis=0,)
-            self.df[f"phase_error"] = self.df.groupby(['prn', 'signal'])['phase_rate'].diff().div(sampling, axis=0,)
-            self.df[f"doppler_error"] = self.df.groupby(['prn', 'signal'])['doppler'].diff().div(sampling, axis=0,)
-        except:
-            print("Error during errors computation, skipped.")
+        # # Computing the errors
+        # try:
+        #     self.df[f"pseudorange_rate"] = self.df.groupby(['prn', 'signal'])['pseudorange'].diff().div(sampling, axis=0,)
+        #     self.df[f"pseudorange_error"] = self.df.groupby(['prn', 'signal'])['pseudorange_rate'].diff().div(sampling, axis=0,)
+        #     self.df[f"phase_rate"] = self.df.groupby(['prn', 'signal'])['phase'].diff().div(sampling, axis=0,)
+        #     self.df[f"phase_error"] = self.df.groupby(['prn', 'signal'])['phase_rate'].diff().div(sampling, axis=0,)
+        #     self.df[f"doppler_error"] = self.df.groupby(['prn', 'signal'])['doppler'].diff().div(sampling, axis=0,)
+        # except:
+        #     print("Error during errors computation, skipped.")
 
         return
     

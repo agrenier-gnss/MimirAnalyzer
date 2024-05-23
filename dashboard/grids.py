@@ -239,15 +239,16 @@ def selectGnssMeasurement(reset_button, log, meas, gps_svid, glo_svid, gal_svid,
     
     # Display state
     if meas == "State":
-        df = log.raw.loc[log.raw['prn'].isin(selected_prn), ['prn', 'datetime', 'timestamp', 'State']]
+        df = log.raw.loc[log.raw['prn'].isin(selected_prn), ['prn', 'timestamp', 'State']]
         df[["State_split"]] = df.apply(lambda row: getSplitState(row['State'], bits=17, type='tracking'), axis='columns', result_type='expand')
         df = df.explode('State_split')
         df.rename(columns={"State_split":"measurement"}, inplace=True)
     elif meas == "AccumulatedDeltaRangeState":
-        df = log.raw.loc[log.raw['prn'].isin(selected_prn), ['prn', 'datetime', 'timestamp', 'AccumulatedDeltaRangeState']]
+        df = log.raw.loc[log.raw['prn'].isin(selected_prn), ['prn', 'timestamp', 'AccumulatedDeltaRangeState']]
         df[["State_split"]] = df.apply(lambda row: getSplitState(row['AccumulatedDeltaRangeState'], bits=5, type='phase'), axis='columns', result_type='expand')
         df = df.explode('State_split')
         df.rename(columns={"State_split":"measurement"}, inplace=True)
+        print(df)
     else:
         df = log.raw.loc[log.raw['prn'].isin(selected_prn), [meas, 'prn', 'timestamp']]
         df.rename(columns={meas:"measurement"}, inplace=True)
