@@ -9,7 +9,7 @@ import sys
 module_path = os.path.abspath(os.path.join('..'))
 if module_path not in sys.path:
     sys.path.append(module_path)
-from logparser import LogReader, PosReader, RinexReader
+from logparser import LogReader, PosReader, RinexReader, MatReader
 
 # ======================================================================================================================
 # Survey, acquisition, indoor 
@@ -23,15 +23,15 @@ time_format = "%Y-%m-%dT%H:%M:%S"
 
 survey_mode = pd.DataFrame.from_dict({
     0  : ['survey', 'acquisition',       'UA',     'U1',      'A52',      'GP7',      'GPW',      'SW6'], 
-    1  : ['S1',             'A01', 'SWINGING',       '',   'POCKET', 'SWINGING', 'SWINGING',         ''], 
-    2  : ['S1',             'A02',  'TEXTING',       '',   'POCKET',  'TEXTING',  'TEXTING',         ''], 
-    3  : ['S1',             'A03', 'SWINGING',       '', 'SWINGING',   'POCKET', 'SWINGING',         ''], 
-    4  : ['S1',             'A04',  'TEXTING',       '',  'TEXTING',   'POCKET',  'TEXTING',         ''], 
-    5  : ['S1',             'A05', 'SWINGING',       '', 'SWINGING',   'POCKET',         '', 'SWINGING'], 
-    6  : ['S1',             'A06',  'TEXTING',       '',  'TEXTING',   'POCKET',         '',  'TEXTING'], 
-    7  : ['S1',             'A07', 'SWINGING', 'POCKET',   'POCKET', 'SWINGING', 'SWINGING', 'SWINGING'], 
-    8  : ['S1',             'A08',  'TEXTING', 'POCKET',   'POCKET',  'TEXTING',  'TEXTING',  'TEXTING'], 
-    9  : ['S1',             'A09', 'SWINGING', 'POCKET', 'SWINGING',   'POCKET', 'SWINGING', 'SWINGING'], 
+    1  : ['S1',              'A1', 'SWINGING',       '',   'POCKET', 'SWINGING', 'SWINGING',         ''], 
+    2  : ['S1',              'A2',  'TEXTING',       '',   'POCKET',  'TEXTING',  'TEXTING',         ''], 
+    3  : ['S1',              'A3', 'SWINGING',       '', 'SWINGING',   'POCKET', 'SWINGING',         ''], 
+    4  : ['S1',              'A4',  'TEXTING',       '',  'TEXTING',   'POCKET',  'TEXTING',         ''], 
+    5  : ['S1',              'A5', 'SWINGING',       '', 'SWINGING',   'POCKET',         '', 'SWINGING'], 
+    6  : ['S1',              'A6',  'TEXTING',       '',  'TEXTING',   'POCKET',         '',  'TEXTING'], 
+    7  : ['S1',              'A7', 'SWINGING', 'POCKET',   'POCKET', 'SWINGING', 'SWINGING', 'SWINGING'], 
+    8  : ['S1',              'A8',  'TEXTING', 'POCKET',   'POCKET',  'TEXTING',  'TEXTING',  'TEXTING'], 
+    9  : ['S1',              'A9', 'SWINGING', 'POCKET', 'SWINGING',   'POCKET', 'SWINGING', 'SWINGING'], 
     10 : ['S1',             'A10',  'TEXTING', 'POCKET',  'TEXTING',   'POCKET',  'TEXTING',  'TEXTING'],
     11 : ['S3',              'A1', 'SWINGING', 'POCKET',   'POCKET', 'SWINGING', 'SWINGING',         ''], 
     12 : ['S3',              'A2',  'TEXTING', 'POCKET',   'POCKET',  'TEXTING',  'TEXTING',  'TEXTING'], 
@@ -48,62 +48,127 @@ survey_mode = survey_mode.reset_index(drop=True)
 
 # ======================================================================================================================
 
-def load_files(folder_path, acq_list, device_android, device_uliss, mode=None, indoor_only=False, survey=''):
+# ----------------------------------------------------------------------------------------------------------------------
+
+def load_raw(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'POCKET'], indoor_only=False, survey=''):
+
     log_dict = {}
+
     # Android devices
     for acq in acq_list:
-        for device in device_android:
-            filepath = f"{folder_path}/{acq}/{device}/Raw.csv"
-            if not os.path.isfile(filepath):
-                #print(f"File not found for {acq} {device}")
-                continue
-
-            if mode:
-                _mode = survey_mode.loc[(survey_mode['survey'] == survey) & (survey_mode['acquisition'] == acq)][device].iloc[0]
-                if mode not in _mode:
-                    continue
-            log = LogReader(manufacturer="", device="", acronym=device, specifiedTags='Raw', mode="old", filepath=filepath)
-            
-            if indoor_only:
-                times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
-                start_time = datetime.strptime(times[0], time_format).timestamp() + 3600*2
-                stop_time = datetime.strptime(times[1], time_format).timestamp() + 3600*2
-                log.raw = log.raw.loc[(log.raw['timestamp'] > start_time) & (log.raw['timestamp'] < stop_time)]
-            
-            if device in log_dict:
-                log_dict[device] = pd.concat([log_dict[device], log.raw], ignore_index=True, sort=False)
-            else:
-                log_dict[device] = log.raw
-    
-    # ULISS devices
-    measurements_RINEX = sum([[f"{y}{x}" for y in ['S']] for x in ['1C', '2L', '2S', '2C', '2I', '7Q', '7I']], []) # '2L', '2S', '2C', '2I', '7Q', '7I'
-    for acq in acq_list:
-        for device in device_uliss:
-            filepath = f"{folder_path}/{acq}/{device}/gnss.rnx"
-            if not os.path.isfile(filepath):
-                #print(f"File not found for {acq} {device}")
-                continue
-
-            if mode:
-                _mode = survey_mode.loc[(survey_mode['survey'] == survey) & (survey_mode['acquisition'] == acq)][device].iloc[0]
-                if mode not in _mode:
+        for device in device_list:
+            for _mode in mode:
+                filepath = f"{folder_path}/{acq}/{device}/Raw.csv"
+                if not os.path.isfile(filepath):
+                    #print(f"File not found for {acq} {device}")
                     continue
 
-            if indoor_only:
-                times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
-                log = RinexReader(device, filepath, tlim=[times[0], times[1]], meas=measurements_RINEX, sampling=0.2)
-            else:
-                log = RinexReader(device, filepath, tlim=[], meas=measurements_RINEX, sampling=0.2)
-            if device in log_dict:
-                log_dict[device] = pd.concat([log_dict[device], log.df], ignore_index=True, sort=False)
-            else:
-                log_dict[device] = log.df
-    
+                if not checkAcquisitionMode(survey, acq, device, _mode):
+                    continue
+                log = LogReader(manufacturer="", device="", acronym=device, specifiedTags='Raw', mode="old", filepath=filepath)
+                
+                if indoor_only:
+                    times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
+                    start_time = datetime.strptime(times[0], time_format).timestamp() + 3600*2
+                    stop_time = datetime.strptime(times[1], time_format).timestamp() + 3600*2
+                    log.raw = log.raw.loc[(log.raw['timestamp'] > start_time) & (log.raw['timestamp'] < stop_time)]
+                
+                log.raw['mode'] = _mode
+                
+                if device in log_dict:
+                    log_dict[device] = pd.concat([log_dict[device], log.raw], ignore_index=True, sort=False)
+                else:
+                    log_dict[device] = log.raw
+
+
     return log_dict
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotBoxPlotCN0(log_dict, device_android, device_uliss):
+def load_rinex(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'POCKET'], indoor_only=False, survey=''):
+
+    log_dict = {}
+
+    measurements_RINEX = sum([[f"{y}{x}" for y in ['S']] for x in ['1C', '2L', '2S', '2C', '2I', '7Q', '7I']], []) # '2L', '2S', '2C', '2I', '7Q', '7I'
+    for acq in acq_list:
+        for device in device_list:
+            for _mode in mode:
+                # Check if correct mode
+                if not checkAcquisitionMode(survey, acq, device, _mode):
+                    continue
+
+                filepath = f"{folder_path}/{acq}/{device}/gnss.rnx"
+                if not os.path.isfile(filepath):
+                    #print(f"File not found for {acq} {device}")
+                    continue
+
+                # Filter by indoor time only
+                if indoor_only:
+                    times = indoor_time.loc[(indoor_time['survey'] == survey) \
+                                            & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
+                    log = RinexReader(device, filepath, tlim=[times[0], times[1]], meas=measurements_RINEX, sampling=0.2)
+                else:
+                    log = RinexReader(device, filepath, tlim=[], meas=measurements_RINEX, sampling=0.2)
+
+                log.df['mode'] = _mode
+                
+                if device in log_dict:
+                    log_dict[device] = pd.concat([log_dict[device], log.df], ignore_index=True, sort=False)
+                else:
+                    log_dict[device] = log.df
+
+    return log_dict
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def load_mat(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'POCKET'], indoor_only=False, survey=''):
+
+    log_dict = {}
+
+    for acq in acq_list:
+        for device in device_list:
+            for _mode in mode:
+                # Check if correct mode
+                if not checkAcquisitionMode(survey, acq, device, _mode):
+                    continue
+                
+                filepath = f"{folder_path}/{acq}/{device}/gnss.mat"
+                if not os.path.isfile(filepath):
+                    #print(f"File not found for {acq} {device}")
+                    continue
+
+                log = MatReader(device, filepath)
+
+                log.df['mode'] = _mode
+
+                if device in log_dict:
+                    log_dict[device] = pd.concat([log_dict[device], log.df], ignore_index=True, sort=False)
+                else:
+                    log_dict[device] = log.df
+
+    return log_dict
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# def selectMode(log_dict, modes)
+    
+#     for device, log in log_android.items():
+#         log_dict[device] = log.loc[log['mode'] == 'TEXTING']
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def checkAcquisitionMode(survey, acquisition, device, mode):
+
+    _mode = survey_mode.loc[(survey_mode['survey'] == survey) & (survey_mode['acquisition'] == acquisition)][device].iloc[0]
+
+    if _mode == mode:
+        return True
+    else:
+        return False
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotBoxPlotCN0PerFrequency(log_dict, device_android, device_uliss):
     pd.options.mode.chained_assignment = None  # default='warn'
     # suppose df1 and df2 are dataframes, each with the same 10 columns
     df = pd.DataFrame()
@@ -121,6 +186,34 @@ def plotBoxPlotCN0(log_dict, device_android, device_uliss):
     plt.figure(figsize=(4,3))
     sns.boxplot(data=df, x='device', y='Cn0DbHz', hue='Frequency', 
                 order = device_android + device_uliss, hue_order=['L1', 'L2', 'L5'], whis=(0, 100), gap=.1)
+    plt.ylim((0, 60))
+    plt.rc('axes', axisbelow=True)
+    plt.grid()
+    plt.tight_layout()
+    plt.xlabel("Device")
+    plt.ylabel("C/N0 [dB-Hz]")
+
+    return
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss):
+    pd.options.mode.chained_assignment = None  # default='warn'
+    # suppose df1 and df2 are dataframes, each with the same 10 columns
+    df = pd.DataFrame()
+    for device, log in log_dict.items():
+        if device in device_android:
+            _df = log.reset_index()[['Cn0DbHz', 'mode']]
+        if device in device_uliss:
+            _df = log[['snr', 'mode']]
+            _df.rename(columns={'snr':'Cn0DbHz'}, inplace=True)
+        _df['device'] = device
+
+        df = pd.concat([df, _df], axis=0)
+    
+    plt.figure(figsize=(4,3))
+    sns.boxplot(data=df, x='device', y='Cn0DbHz', hue='mode', order = device_android + device_uliss, 
+                hue_order=['TEXTING', 'SWINGING', 'POCKET'], whis=(0, 100), gap=.1)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
     plt.grid()

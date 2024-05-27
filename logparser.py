@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas as pd
+import scipy.io
 
 import georinex as gr
 
@@ -639,6 +640,27 @@ class RinexReader():
 
         return
     
+# =====================================================================================================================
+
+class MatReader():
+    """
+    """
+
+    def __init__(self, device, filepath):
+
+        mat = scipy.io.loadmat(filepath)
+
+        tag_list = ['time', 'num_sat', 'num_sat_valid', 'num_sat_gps', 'num_sat_gps_valid', 'num_sat_gal', 
+                'num_sat_gal_valid', 'num_sat_glo', 'num_sat_glo_valid']
+
+        df_dict = {}
+        for tag in tag_list:
+            df_dict[tag] = np.squeeze(mat['GNSS'][tag][0][0])
+        self.df = pd.DataFrame.from_dict(df_dict)
+
+        return
+
+
 # =====================================================================================================================
 
 if __name__ == "__main__":
