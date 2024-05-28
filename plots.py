@@ -574,7 +574,6 @@ def plotTotalSignalsPerEpochs(logs, lim, ticks, mode='signal', save=None):
     if save is not None:
         plt.savefig(f"{save}.png", dpi=300)
 
-
 # ----------------------------------------------------------------------------------------------------------------------
 
 def statsSignalsPerSystem(logs, percent=False):
@@ -656,7 +655,6 @@ def statsDataPerFrquency(logs, data):
     stats
         
     return df_stats
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 
