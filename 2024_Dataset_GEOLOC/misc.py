@@ -3,6 +3,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import datetime
+import gps_time
+import pymap3d as pm
 
 import matplotlib
 import numpy as np
@@ -13,7 +15,6 @@ import io
 from urllib.request import urlopen, Request
 from PIL import Image
 import pandas as pd
-import datetime
 
 import os
 import sys
@@ -22,6 +23,9 @@ if module_path not in sys.path:
     sys.path.append(module_path)
 from logparser import LogReader, PosReader, RinexReader, MatReader
 import logparser as lp
+# ======================================================================================================================
+
+LEAP_SECONDS = 18
 
 # ======================================================================================================================
 # Survey, acquisition, indoor 
@@ -57,6 +61,31 @@ survey_mode = pd.DataFrame.from_dict({
 survey_mode = survey_mode.rename(columns=survey_mode.iloc[0])
 survey_mode = survey_mode.drop(survey_mode.index[0])
 survey_mode = survey_mode.reset_index(drop=True)
+
+gps_week = pd.DataFrame.from_dict({
+    0  : ['survey', 'acquisition', 'week'], 
+    1  : ['S1',              'A1',   2305], 
+    2  : ['S1',              'A2',   2305], 
+    3  : ['S1',              'A3',   2305], 
+    4  : ['S1',              'A4',   2305], 
+    5  : ['S1',              'A5',   2305], 
+    6  : ['S1',              'A6',   2305], 
+    7  : ['S1',              'A7',   2306], 
+    8  : ['S1',              'A8',   2306], 
+    9  : ['S1',              'A9',   2306], 
+    10 : ['S1',             'A10',   2306],
+    11 : ['S3',              'A1',   2305], 
+    12 : ['S3',              'A2',   2305], 
+    13 : ['S3',              'A3',   2305], 
+    14 : ['S3',              'A4',   2305], 
+    15 : ['S3',              'A5',   2305], 
+    16 : ['S3',              'A6',   2305], 
+    17 : ['S4',              'A1',   2305], 
+    18 : ['S4',              'A2',   2305],
+    }, orient='index')
+gps_week = gps_week.rename(columns=gps_week.iloc[0])
+gps_week = gps_week.drop(gps_week.index[0])
+gps_week = gps_week.reset_index(drop=True)
 
 # ======================================================================================================================
 
@@ -177,8 +206,6 @@ def load_fix(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'P
                 if not checkAcquisitionMode(survey, acq, device, _mode):
                     continue
                 log = LogReader(manufacturer="", device="", acronym=device, specifiedTags='Fix', mode="old", filepath=filepath)
-
-                #log.fix = log.fix.loc[log.fix['provider'].isin(['FUSED'])]
                 
                 if indoor_only:
                     times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
@@ -188,6 +215,8 @@ def load_fix(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'P
                 
                 log.fix['mode'] = _mode
                 log.fix['acquisition'] = acq
+
+                log.fix.reset_index(inplace=True)
                 
                 if device in log_dict:
                     log_dict[device] = pd.concat([log_dict[device], log.fix], ignore_index=True, sort=False)
@@ -196,6 +225,104 @@ def load_fix(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'P
 
 
     return log_dict
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def load_light(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'POCKET'], indoor_only=False, survey=''):
+
+    log_dict = {}
+
+    # Android devices
+    for acq in acq_list:
+        for device in device_list:
+            for _mode in mode:
+                if not checkAcquisitionMode(survey, acq, device, _mode):
+                    continue
+                
+                processing_types = ['Hyb', 'Light', 'Pdr']
+                for _type in processing_types:
+                    filepath = f"{folder_path}/{acq}/{device}/pos_{_type.lower()}.csv"
+                    if not os.path.isfile(filepath):
+                        #print(f"File not found for {acq} {device}")
+                        continue
+                    
+                    log = pd.read_csv(filepath)
+
+                    log.rename(columns={f'{_type}_TOW':'tow',
+                                        f'{_type}_lat':'latitude', 
+                                        f'{_type}_lon':'longitude', 
+                                        f'{_type}_alt':'altitude'}, inplace=True)
+
+                    # Convert time
+                    log.dropna(inplace=True)
+                    week = gps_week.loc[(gps_week['survey'] == survey) & (gps_week['acquisition'] == acq_list[0])]['week'].iloc[0]
+                    log['datetime'] = log.apply(lambda x: gps_time.GPSTime(week, x['tow']-LEAP_SECONDS).to_datetime(), axis=1) 
+
+                    # if indoor_only:
+                    #     times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
+                    #     start_time = datetime.strptime(times[0], time_format).timestamp() + 3600*2
+                    #     stop_time = datetime.strptime(times[1], time_format).timestamp() + 3600*2
+                    #     log.fix = log.fix.loc[(log.fix['timestamp'] > start_time) & (log.fix['timestamp'] < stop_time)]
+                    
+                    log['provider'] = _type.upper()
+                    log['mode'] = _mode
+                    log['acquisition'] = acq
+                    
+                    if device in log_dict:
+                        log_dict[device] = pd.concat([log_dict[device], log], ignore_index=True, sort=False)
+                    else:
+                        log_dict[device] = log
+
+
+    return log_dict
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def getENUErrors(log_dict, device_android, device_uliss, acq_list, provider_uliss, provider_android):
+
+    pd.options.mode.chained_assignment = None  # default='warn'
+
+    df_diff = pd.DataFrame()
+    for acq in acq_list:
+        log_uliss = log_dict[device_uliss].loc[(log_dict[device_uliss]['provider'] == provider_uliss) 
+                                       & (log_dict[device_uliss]['acquisition'] == acq)]
+        log_uliss.set_index('datetime', inplace=True)
+
+        ref_enu = [log_uliss['latitude'].mean(), log_uliss['longitude'].mean(), log_uliss['altitude'].mean()]
+        log_uliss[["east", "north", "up"]] = log_uliss.apply(
+            lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
+            axis='columns', result_type='expand')
+
+        for device in device_android:
+            log_android = log_dict[device].loc[(log_dict[device]['provider'] == provider_android) 
+                                              & (log_dict[device]['acquisition'] == acq)]
+            
+            if log_android.empty:
+                continue
+
+            log_android = log_android.iloc[5:]
+            log_android.set_index('datetime', inplace=True)
+            
+            log_android[["east", "north", "up"]] = log_android.apply(
+                lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
+                axis='columns', result_type='expand')
+
+            pos_A, pos_B = log_uliss[["east", "north", "up"]].align(log_android[["east", "north", "up"]])
+            log_diff = pos_B.interpolate(method='time') - pos_A.interpolate(method='time')
+            log_diff.dropna(how='all', inplace=True)
+
+            log_diff[["2D_error"]] = log_diff.apply(
+                lambda row: getHorizontalError(row['east'], row['north']), 
+                axis='columns', result_type='expand')
+            
+            log_diff[["3D_error"]] = log_diff.apply(
+                lambda row: get3DError(row['east'], row['north'], row['up']), 
+                axis='columns', result_type='expand')
+            
+            log_diff["device"] = device
+            df_diff = pd.concat([df_diff, log_diff])
+
+    return df_diff
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -211,25 +338,6 @@ def selectMode(log_dict_list, mode):
     return log_dict
 
 # ----------------------------------------------------------------------------------------------------------------------
-
-# def selectValidSatellites(df, check_phase=False):
-
-#     # Check bit flags
-#     df = df[(df['ConstellationType'] == lp.GnssSystems.GPS) 
-#                 & (df['State'] & lp.STATE_CODE_LOCK == lp.STATE_CODE_LOCK) 
-#                     & ((df['State'] & lp.STATE_TOW_DECODED == lp.STATE_TOW_DECODED) 
-#                     |  (df['State'] & lp.STATE_TOW_KNOWN == lp.STATE_TOW_KNOWN)) |
-#             (df['ConstellationType'] == lp.GnssSystems.GALILEO) 
-#                 & (df['State'] & lp.STATE_CODE_LOCK == lp.STATE_CODE_LOCK) 
-#                     & ((df['State'] & lp.STATE_TOW_DECODED == lp.STATE_TOW_DECODED) 
-#                     |  (df['State'] & lp.STATE_TOW_KNOWN == lp.STATE_TOW_KNOWN)) |
-#             (df['ConstellationType'] == lp.GnssSystems.GLONASS) 
-#                 & (df['State'] & lp.STATE_CODE_LOCK == lp.STATE_CODE_LOCK) 
-#                     & ((df['State'] & lp.STATE_GLO_TOD_DECODED == lp.STATE_GLO_TOD_DECODED) \
-#                     |  (df['State'] & lp.STATE_GLO_TOD_KNOWN == lp.STATE_GLO_TOD_KNOWN))]
-
-#     return df
-
 
 def selectValidSatellites(df, check_phase=False):
 
@@ -436,3 +544,59 @@ def plotMap(locations, scale, marker='', markersize=1):
     plt.grid(False)
 
     matplotlib.rcParams.update({'font.size': 12})
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotEN(log_dict, device_android, device_uliss, acq, provider_uliss, provider_android):
+    
+    pd.options.mode.chained_assignment = None  # default='warn'
+
+    log_uliss = log_dict[device_uliss].loc[(log_dict[device_uliss]['provider'] == provider_uliss) 
+                                    & (log_dict[device_uliss]['acquisition'] == acq)]
+    log_uliss.set_index('datetime', inplace=True)
+
+    ref_enu = [log_uliss['latitude'].mean(), log_uliss['longitude'].mean(), log_uliss['altitude'].mean()]
+    log_uliss[["east", "north", "up"]] = log_uliss.apply(
+        lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
+        axis='columns', result_type='expand')
+    
+    plt.figure(figsize=(8,6))
+    plt.plot(log_uliss['east'], log_uliss['north'])
+
+    for device in device_android:
+        log_android = log_dict[device].loc[(log_dict[device]['provider'] == provider_android) 
+                                            & (log_dict[device]['acquisition'] == acq)]
+
+        log_android = log_android.iloc[5:]
+        log_android.set_index('datetime', inplace=True)
+        
+        log_android[["east", "north", "up"]] = log_android.apply(
+            lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
+            axis='columns', result_type='expand')
+        
+        plt.plot(log_android['east'], log_android['north'])
+
+    plt.grid()
+    plt.axis('equal')
+
+    pd.options.mode.chained_assignment = 'warn' # default='warn'
+
+    return
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def convert2ENU(lat, lon, alt, ref):
+    east, north, up = pm.geodetic2enu(lat, lon, alt, ref[0], ref[1], ref[2])
+    return {"east":east, "north":north, "up":up}
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def getHorizontalError(east, north):
+    error = np.sqrt(north**2 + east**2)
+    return {"2D_error":error}
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def get3DError(east, north, up):
+    error = np.sqrt(north**2 + east**2 + up**2)
+    return {"2D_error":error}
