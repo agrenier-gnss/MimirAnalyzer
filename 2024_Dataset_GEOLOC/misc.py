@@ -390,7 +390,7 @@ def plotBoxPlotCN0PerFrequency(log_dict, device_android, device_uliss):
 
     plt.figure(figsize=(4,3))
     sns.boxplot(data=df, x='device', y='Cn0DbHz', hue='Frequency', 
-                order = device_android + device_uliss, hue_order=['L1', 'L2', 'L5'], whis=(0, 100), gap=.1)
+                order = device_android + device_uliss, hue_order=['L1', 'L2', 'L5'], whis=(0, 100), gap=.1, legend=False)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
     plt.grid()
@@ -418,7 +418,7 @@ def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss):
     
     plt.figure(figsize=(4,3))
     sns.boxplot(data=df, x='device', y='Cn0DbHz', hue='mode', order = device_android + device_uliss, 
-                hue_order=['TEXTING', 'SWINGING', 'POCKET'], whis=(0, 100), gap=.1)
+                hue_order=['TEXTING', 'SWINGING', 'POCKET'], whis=(0, 100), gap=.1, legend=False)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
     plt.grid()
@@ -448,7 +448,7 @@ def plotBarSignalsPerMode(log_dict, device_android, device_uliss):
 
     plt.figure(figsize=(4,3))
     sns.barplot(data=df, x='device', y='prn', hue='mode', order = device_android + device_uliss, 
-                hue_order=['TEXTING', 'SWINGING', 'POCKET'], errorbar='sd')
+                hue_order=['TEXTING', 'SWINGING', 'POCKET'], errorbar='sd', legend=False)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
     plt.grid()
@@ -478,7 +478,7 @@ def plotBarSatellitesPerMode(log_dict, device_android, device_uliss):
 
     plt.figure(figsize=(4,3))
     sns.barplot(data=df, x='device', y='sv', hue='mode', order = device_android + device_uliss, 
-                hue_order=['TEXTING', 'SWINGING', 'POCKET'], errorbar='sd')
+                hue_order=['TEXTING', 'SWINGING', 'POCKET'], errorbar='sd', legend=False)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
     plt.grid()
