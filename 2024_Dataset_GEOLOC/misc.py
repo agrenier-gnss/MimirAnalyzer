@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import gps_time
 import pymap3d as pm
+import scipy 
 
 import matplotlib
 import numpy as np
@@ -26,6 +27,8 @@ import logparser as lp
 # ======================================================================================================================
 
 LEAP_SECONDS = 18
+
+PALETTE_COLOR = {"TEXTING": "#779ECB", "SWINGING": "#FC8EAC", "POCKET":"#50C878"}
 
 # ======================================================================================================================
 # Survey, acquisition, indoor 
@@ -179,6 +182,17 @@ def load_mat(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'P
 
                 log = MatReader(device, filepath)
 
+                # Convert time
+                log.df.dropna(inplace=True)
+                week = gps_week.loc[(gps_week['survey'] == survey) & (gps_week['acquisition'] == acq_list[0])]['week'].iloc[0]
+                log.df['datetime'] = log.df.apply(lambda x: gps_time.GPSTime(week, x['time']-LEAP_SECONDS).to_datetime().timestamp(), axis=1) 
+                
+                if indoor_only:
+                    times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
+                    start_time = datetime.strptime(times[0], time_format).timestamp()
+                    stop_time = datetime.strptime(times[1], time_format).timestamp()
+                    log.df = log.df.loc[(log.df['datetime'] > start_time) & (log.df['datetime'] < stop_time)]
+
                 log.df['mode'] = _mode
 
                 if device in log_dict:
@@ -187,6 +201,73 @@ def load_mat(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'P
                     log_dict[device] = log.df
 
     return log_dict
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def load_mat_cn0(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 'POCKET'], indoor_only=False, survey=''):
+
+    pd.options.mode.chained_assignment = None  # default='warn'
+
+    log_dict = {}
+
+    columns = ['tow']
+    columns += [f'G{i:02d}' for i in range(1,33)]
+    columns += [f'R{i:02d}' for i in range(1,27)]
+    columns += [f'E{i:02d}' for i in range(1,37)]
+                
+
+    for acq in acq_list:
+        for device in device_list:
+            for _mode in mode:
+                # Check if correct mode
+                if not checkAcquisitionMode(survey, acq, device, _mode):
+                    continue
+                
+                filepath = f"{folder_path}/{acq}/{device}/gnss.mat"
+                if not os.path.isfile(filepath):
+                    #print(f"File not found for {acq} {device}")
+                    continue
+
+                mat = scipy.io.loadmat(filepath)
+
+                df = pd.DataFrame()
+                # L1 
+                _df = np.concatenate((mat['GNSS']['time'][0][0], mat['GNSS']['snr_1'][0][0]), axis=1)
+                _df = pd.DataFrame(_df, columns=columns)
+                _df = _df.melt(id_vars=['tow'], var_name='prn', value_name='snr').dropna()
+                _df['frequency'] = 'L1'
+                df = pd.concat([df, _df],  axis=0)
+                df
+                # L2/L5
+                _df = np.concatenate((mat['GNSS']['time'][0][0], mat['GNSS']['snr_2'][0][0]), axis=1)
+                _df = pd.DataFrame(_df, columns=columns)
+                _df = _df.melt(id_vars=['tow'], var_name='prn', value_name='snr').dropna()
+                _df['frequency'] = 'L1'
+                _df['frequency'].loc[_df["prn"].str.contains('G')] = 'L2'
+                _df['frequency'].loc[_df["prn"].str.contains('R')] = 'L2'
+                _df['frequency'].loc[_df["prn"].str.contains('E')] = 'L5'
+                log = pd.concat([df, _df],  axis=0)
+
+                # Convert time
+                log.dropna(inplace=True)
+                week = gps_week.loc[(gps_week['survey'] == survey) & (gps_week['acquisition'] == acq_list[0])]['week'].iloc[0]
+                log['datetime'] = log.apply(lambda x: gps_time.GPSTime(week, x['tow']-LEAP_SECONDS).to_datetime().timestamp(), axis=1) 
+                
+                if indoor_only:
+                    times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
+                    start_time = datetime.strptime(times[0], time_format).timestamp()
+                    stop_time = datetime.strptime(times[1], time_format).timestamp()
+                    log = log.loc[(log['datetime'] > start_time) & (log['datetime'] < stop_time)]
+
+                log['mode']= _mode
+
+                if device in log_dict:
+                    log_dict[device] = pd.concat([log_dict[device], log], ignore_index=True, sort=False)
+                else:
+                    log_dict[device] = log
+
+    return log_dict
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -402,7 +483,8 @@ def plotBoxPlotCN0PerFrequency(log_dict, device_android, device_uliss):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss):
+def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss, mode=['TEXTING', 'SWINGING', 'POCKET']):
+
     pd.options.mode.chained_assignment = None  # default='warn'
     # suppose df1 and df2 are dataframes, each with the same 10 columns
     df = pd.DataFrame()
@@ -415,10 +497,11 @@ def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss):
         _df['device'] = device
 
         df = pd.concat([df, _df], axis=0)
-    
+
     plt.figure(figsize=(4,3))
     sns.boxplot(data=df, x='device', y='Cn0DbHz', hue='mode', order = device_android + device_uliss, 
-                hue_order=['TEXTING', 'SWINGING', 'POCKET'], whis=(0, 100), gap=.1, legend=False)
+                hue_order=mode, whis=(0, 100), gap=.1, legend=False,
+                palette=PALETTE_COLOR)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
     plt.grid()
@@ -430,7 +513,7 @@ def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotBarSignalsPerMode(log_dict, device_android, device_uliss):
+def plotBarSignalsPerMode(log_dict, device_android, device_uliss, mode=['TEXTING', 'SWINGING', 'POCKET']):
 
     df = pd.DataFrame()
     for device, log in log_dict.items():
@@ -448,7 +531,8 @@ def plotBarSignalsPerMode(log_dict, device_android, device_uliss):
 
     plt.figure(figsize=(4,3))
     sns.barplot(data=df, x='device', y='prn', hue='mode', order = device_android + device_uliss, 
-                hue_order=['TEXTING', 'SWINGING', 'POCKET'], errorbar='sd', legend=False)
+                hue_order=mode, errorbar='sd', legend=False,
+                palette=PALETTE_COLOR)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
     plt.grid()
@@ -490,7 +574,7 @@ def plotBarSatellitesPerMode(log_dict, device_android, device_uliss):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotMap(locations, scale, marker='', markersize=1):
+def plotMap(locations, extent, scale, marker='', markersize=1, figsize=(8,4)):
     """
     Taken from: https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy
     Mapping New York City Open Street Map (OSM) with Cartopy
@@ -514,9 +598,9 @@ def plotMap(locations, scale, marker='', markersize=1):
     cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
     osm_img = cimgt.OSM() # spoofed, downloaded street map
 
-    fig = plt.figure(figsize=(8,8)) # open matplotlib figure
+    fig = plt.figure(figsize=figsize) # open matplotlib figure
     ax1 = plt.axes(projection=osm_img.crs) # project using coordinate reference system (CRS) of street map
-    #ax1.set_extent(extent) # set extents
+    ax1.set_extent(extent) # set extents
 
     ax1.add_image(osm_img, int(scale)) # add OSM with zoom specification
 
@@ -531,8 +615,8 @@ def plotMap(locations, scale, marker='', markersize=1):
     # gl.top_labels = False
     # gl.right_labels = False
 
-    #ax1.set_xticks(np.linspace(extent[0],extent[1],7),crs=ccrs.PlateCarree()) # set longitude indicators
-    #ax1.set_yticks(np.linspace(extent[2],extent[3],7)[1:],crs=ccrs.PlateCarree()) # set latitude indicators
+    ax1.set_xticks(np.linspace(extent[0],extent[1],5),crs=ccrs.PlateCarree()) # set longitude indicators
+    ax1.set_yticks(np.linspace(extent[2],extent[3],7)[1:],crs=ccrs.PlateCarree()) # set latitude indicators
     lon_formatter = LongitudeFormatter(number_format='0.4f',degree_symbol='',dateline_direction_label=True) # format lons
     lat_formatter = LatitudeFormatter(number_format='0.4f',degree_symbol='') # format lats
     ax1.xaxis.set_major_formatter(lon_formatter) # set lons
