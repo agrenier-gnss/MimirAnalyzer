@@ -375,33 +375,34 @@ def getENUErrors(log_dict, device_android, device_uliss, acq_list, provider_ulis
             axis='columns', result_type='expand')
 
         for device in device_android:
-            log_android = log_dict[device].loc[(log_dict[device]['provider'] == provider_android) 
-                                              & (log_dict[device]['acquisition'] == acq)]
-            
-            if log_android.empty:
-                continue
+            for provider in provider_android[device]:
+                log_android = log_dict[device].loc[(log_dict[device]['provider'] == provider) 
+                                                & (log_dict[device]['acquisition'] == acq)]
+                
+                if log_android.empty:
+                    continue
 
-            log_android = log_android.iloc[5:]
-            log_android.set_index('datetime', inplace=True)
-            
-            log_android[["east", "north", "up"]] = log_android.apply(
-                lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
-                axis='columns', result_type='expand')
+                log_android = log_android.iloc[5:]
+                log_android.set_index('datetime', inplace=True)
+                
+                log_android[["east", "north", "up"]] = log_android.apply(
+                    lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
+                    axis='columns', result_type='expand')
 
-            pos_A, pos_B = log_uliss[["east", "north", "up"]].align(log_android[["east", "north", "up"]])
-            log_diff = pos_B.interpolate(method='time') - pos_A.interpolate(method='time')
-            log_diff.dropna(how='all', inplace=True)
+                pos_A, pos_B = log_uliss[["east", "north", "up"]].align(log_android[["east", "north", "up"]])
+                log_diff = pos_B.interpolate(method='time') - pos_A.interpolate(method='time')
+                log_diff.dropna(how='all', inplace=True)
 
-            log_diff[["2D_error"]] = log_diff.apply(
-                lambda row: getHorizontalError(row['east'], row['north']), 
-                axis='columns', result_type='expand')
-            
-            log_diff[["3D_error"]] = log_diff.apply(
-                lambda row: get3DError(row['east'], row['north'], row['up']), 
-                axis='columns', result_type='expand')
-            
-            log_diff["device"] = device
-            df_diff = pd.concat([df_diff, log_diff])
+                log_diff[["2D_error"]] = log_diff.apply(
+                    lambda row: getHorizontalError(row['east'], row['north']), 
+                    axis='columns', result_type='expand')
+                
+                log_diff[["3D_error"]] = log_diff.apply(
+                    lambda row: get3DError(row['east'], row['north'], row['up']), 
+                    axis='columns', result_type='expand')
+                
+                log_diff["Device"] = f"{device} ({provider})"
+                df_diff = pd.concat([df_diff, log_diff])
 
     return df_diff
 
@@ -666,6 +667,18 @@ def plotEN(log_dict, device_android, device_uliss, acq, provider_uliss, provider
     pd.options.mode.chained_assignment = 'warn' # default='warn'
 
     return
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotECDF(log_diff):
+
+    plt.figure(figsize=(6,4))
+    sns.ecdfplot(log_diff, x='2D_error', stat='proportion', hue='Device')
+    plt.grid()
+    plt.xlim((0,50))
+    plt.xlabel("Horizontal error [m]")
+
+    return 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
