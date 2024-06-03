@@ -30,6 +30,13 @@ LEAP_SECONDS = 18
 
 PALETTE_COLOR = {"TEXTING": "#779ECB", "SWINGING": "#FC8EAC", "POCKET":"#50C878"}
 
+PALETTE_COLOR_DEVICE = {"UA (HYB)":"#1f77b4", 
+                        "GP7 (GPS)": "#ff7f0e", 
+                        "GPW (GPS)": "#2ca02c", 
+                        "GPW (FUSED)":"#d62728",
+                        "SW6 (GPS)" : "#9467bd", 
+                        "A52 (GPS)" : "#8c564b"}
+
 # ======================================================================================================================
 # Survey, acquisition, indoor 
 indoor_time = pd.DataFrame.from_dict({
@@ -672,8 +679,11 @@ def plotEN(log_dict, device_android, device_uliss, acq, provider_uliss, provider
 
 def plotECDF(log_diff):
 
+    device_order = [*PALETTE_COLOR_DEVICE][1:]
+
     plt.figure(figsize=(6,4))
-    sns.ecdfplot(log_diff, x='2D_error', stat='proportion', hue='Device')
+    sns.ecdfplot(log_diff, x='2D_error', stat='proportion', hue='Device', hue_order=device_order,
+                 palette=PALETTE_COLOR_DEVICE)
     plt.grid()
     plt.xlim((0,50))
     plt.xlabel("Horizontal error [m]")
