@@ -564,8 +564,8 @@ def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss, mode=['TEXTING
         df = pd.concat([df, _df], axis=0)
 
     plt.figure(figsize=(4,3))
-    sns.boxplot(data=df, x='device', y='Cn0DbHz', hue='mode', order = device_android + device_uliss, 
-                hue_order=mode, whis=(0, 100), gap=.1, legend=False,
+    ax = sns.boxplot(data=df, x='device', y='Cn0DbHz', hue='mode', order = device_android + device_uliss, 
+                hue_order=mode, whis=(0, 100), gap=.1, legend=True,
                 palette=PALETTE_COLOR)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
@@ -573,6 +573,39 @@ def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss, mode=['TEXTING
     plt.tight_layout()
     plt.xlabel("Device")
     plt.ylabel("C/N0 [dB-Hz]")
+
+    sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False,)
+
+    return
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plotBoxPlotSignalsPerMode(log_dict, device_android, device_uliss, mode=['TEXTING', 'SWINGING', 'POCKET']):
+
+    df = pd.DataFrame()
+    for device, log in log_dict.items():
+        if device in device_android:
+            _df = log[['TimeNanos', 'prn', 'acquisition', 'mode']]
+            _df = _df.groupby(['acquisition', 'TimeNanos', 'mode']).nunique()
+            _df = _df.reset_index().drop(columns=['acquisition', 'TimeNanos'])
+        
+        if device in device_uliss:
+            _df = log[['num_sat', 'mode']]
+            _df.rename(columns={'num_sat':'prn'}, inplace=True)
+
+        _df['device'] = device
+        df = pd.concat([df, _df], axis=0)
+
+    plt.figure(figsize=(4,3))
+    sns.boxplot(data=df, x='device', y='prn', hue='mode', order = device_android + device_uliss, 
+                hue_order=mode, whis=(0, 100), gap=.1, legend=False,
+                palette=PALETTE_COLOR)
+    plt.ylim((0, 60))
+    plt.rc('axes', axisbelow=True)
+    plt.grid()
+    plt.tight_layout()
+    plt.xlabel("Device")
+    plt.ylabel("Number of signals")
 
     return
 
@@ -595,8 +628,8 @@ def plotBarSignalsPerMode(log_dict, device_android, device_uliss, mode=['TEXTING
         df = pd.concat([df, _df], axis=0)
 
     plt.figure(figsize=(4,3))
-    sns.barplot(data=df, x='device', y='prn', hue='mode', order = device_android + device_uliss, 
-                hue_order=mode, errorbar='sd', legend=False,
+    ax = sns.barplot(data=df, x='device', y='prn', hue='mode', order = device_android + device_uliss, 
+                hue_order=mode, errorbar='sd', legend=True,
                 palette=PALETTE_COLOR)
     plt.ylim((0, 60))
     plt.rc('axes', axisbelow=True)
@@ -604,6 +637,9 @@ def plotBarSignalsPerMode(log_dict, device_android, device_uliss, mode=['TEXTING
     plt.tight_layout()
     plt.xlabel("Device")
     plt.ylabel("Number of signals")
+
+    sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False,)
+
 
 
     return 
