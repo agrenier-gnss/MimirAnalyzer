@@ -35,7 +35,8 @@ PALETTE_COLOR_DEVICE = {"UA (HYB)":"#1f77b4",
                         "GPW (GPS)": "#2ca02c", 
                         "GPW (FUSED)":"#d62728",
                         "SW6 (GPS)" : "#9467bd", 
-                        "A52 (GPS)" : "#8c564b"}
+                        "A52 (GPS)" : "#8c564b",
+                        "AWINDA"    : "#e377c2"}
 
 # ======================================================================================================================
 # Survey, acquisition, indoor 
@@ -366,6 +367,51 @@ def load_light(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+def load_awinda(folder_path, acq_list, device_list, survey=''):
+
+    log_dict = {}
+
+    # Android devices
+    for acq in acq_list:
+        for device in device_list:
+                
+            filepath = f"{folder_path}/{acq}/{device}/pos_awinda_60hz.csv"
+            if not os.path.isfile(filepath):
+                #print(f"File not found for {acq} {device}")
+                continue
+            
+            log = pd.read_csv(filepath)
+
+            log.rename(columns={f'Awinda_TOW':'tow',
+                                f'Awinda_lat':'latitude', 
+                                f'Awinda_lon':'longitude', 
+                                f'Awinda_alt':'altitude'}, inplace=True)
+
+            # Convert time
+            log.dropna(inplace=True)
+            week = gps_week.loc[(gps_week['survey'] == survey) & (gps_week['acquisition'] == acq_list[0])]['week'].iloc[0]
+            log['datetime'] = log.apply(lambda x: gps_time.GPSTime(week, x['tow']-LEAP_SECONDS).to_datetime(), axis=1) 
+
+            # if indoor_only:
+            #     times = indoor_time.loc[(indoor_time['survey'] == survey) & (indoor_time['acquisition'] == acq)]['time'].iloc[0]
+            #     start_time = datetime.strptime(times[0], time_format).timestamp() + 3600*2
+            #     stop_time = datetime.strptime(times[1], time_format).timestamp() + 3600*2
+            #     log.fix = log.fix.loc[(log.fix['timestamp'] > start_time) & (log.fix['timestamp'] < stop_time)]
+            
+            log['provider'] = "AWINDA"
+            #log['mode'] = _mode
+            log['acquisition'] = acq
+            
+            if device in log_dict:
+                log_dict[device] = pd.concat([log_dict[device], log], ignore_index=True, sort=False)
+            else:
+                log_dict[device] = log
+
+
+    return log_dict
+
+# ----------------------------------------------------------------------------------------------------------------------
+
 def getENUErrors(log_dict, device_android, device_uliss, acq_list, provider_uliss, provider_android):
 
     pd.options.mode.chained_assignment = None  # default='warn'
@@ -448,6 +494,17 @@ def selectValidSatellites(df, check_phase=False):
 
     return df
 
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+def selectValidSatellitesPhases(df, check_phase=False):
+
+    # Check bit flags
+    df = df[(df['AccumulatedDeltaRangeState'] & lp.ADR_STATE_VALID == lp.ADR_STATE_VALID) 
+          & (df['AccumulatedDeltaRangeState'] & lp.ADR_STATE_CYCLE_SLIP != lp.ADR_STATE_CYCLE_SLIP) 
+          & (df['AccumulatedDeltaRangeState'] & lp.ADR_STATE_RESET != lp.ADR_STATE_RESET)]
+
+    return df
 
 # ----------------------------------------------------------------------------------------------------------------------
 
