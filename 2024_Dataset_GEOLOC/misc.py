@@ -30,13 +30,13 @@ LEAP_SECONDS = 18
 
 PALETTE_COLOR = {"TEXTING": "#779ECB", "SWINGING": "#FC8EAC", "POCKET":"#50C878"}
 
-PALETTE_COLOR_DEVICE = {"UA (HYB)":"#1f77b4", 
+PALETTE_COLOR_DEVICE = {"AWINDA"  : "#e377c2",
+                        "UA (LIGHT-PDR)":"#1f77b4", 
                         "GP7 (GPS)": "#ff7f0e", 
                         "GPW (GPS)": "#2ca02c", 
                         "GPW (FUSED)":"#d62728",
                         "SW6 (GPS)" : "#9467bd", 
-                        "A52 (GPS)" : "#8c564b",
-                        "AWINDA"    : "#e377c2"}
+                        "A52 (GPS)" : "#8c564b"}
 
 # ======================================================================================================================
 # Survey, acquisition, indoor 
@@ -353,6 +353,9 @@ def load_light(folder_path, acq_list, device_list, mode=['TEXTING', 'SWINGING', 
                     #     stop_time = datetime.strptime(times[1], time_format).timestamp() + 3600*2
                     #     log.fix = log.fix.loc[(log.fix['timestamp'] > start_time) & (log.fix['timestamp'] < stop_time)]
                     
+                    if processing_types == 'Hyb':
+                        _type = 'LIGHT-PDR'
+
                     log['provider'] = _type.upper()
                     log['mode'] = _mode
                     log['acquisition'] = acq
@@ -412,25 +415,27 @@ def load_awinda(folder_path, acq_list, device_list, survey=''):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def getENUErrors(log_dict, device_android, device_uliss, acq_list, provider_uliss, provider_android):
+def getENUErrors(log_dict, device_ref, acq_list, provider_ref, provider_devices):
 
     pd.options.mode.chained_assignment = None  # default='warn'
 
     df_diff = pd.DataFrame()
     for acq in acq_list:
-        log_uliss = log_dict[device_uliss].loc[(log_dict[device_uliss]['provider'] == provider_uliss) 
-                                       & (log_dict[device_uliss]['acquisition'] == acq)]
-        log_uliss.set_index('datetime', inplace=True)
+        log_ref = log_dict[device_ref].loc[(log_dict[device_ref]['provider'] == provider_ref) 
+                                    & (log_dict[device_ref]['acquisition'] == acq)]
+        log_ref.set_index('datetime', inplace=True)
 
-        ref_enu = [log_uliss['latitude'].mean(), log_uliss['longitude'].mean(), log_uliss['altitude'].mean()]
-        log_uliss[["east", "north", "up"]] = log_uliss.apply(
+        ref_enu = [log_ref['latitude'].mean(), log_ref['longitude'].mean(), log_ref['altitude'].mean()]
+        log_ref[["east", "north", "up"]] = log_ref.apply(
             lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
             axis='columns', result_type='expand')
 
-        for device in device_android:
-            for provider in provider_android[device]:
-                log_android = log_dict[device].loc[(log_dict[device]['provider'] == provider) 
-                                                & (log_dict[device]['acquisition'] == acq)]
+        for name, items in log_dict.items():
+            if name == device_ref:
+                continue
+            for provider in provider_devices[name]:
+                log_android = log_dict[name].loc[(log_dict[name]['provider'] == provider) 
+                                                & (log_dict[name]['acquisition'] == acq)]
                 
                 if log_android.empty:
                     continue
@@ -442,7 +447,7 @@ def getENUErrors(log_dict, device_android, device_uliss, acq_list, provider_ulis
                     lambda row: convert2ENU(row['latitude'], row['longitude'], row['altitude'], ref_enu), 
                     axis='columns', result_type='expand')
 
-                pos_A, pos_B = log_uliss[["east", "north", "up"]].align(log_android[["east", "north", "up"]])
+                pos_A, pos_B = log_ref[["east", "north", "up"]].align(log_android[["east", "north", "up"]])
                 log_diff = pos_B.interpolate(method='time') - pos_A.interpolate(method='time')
                 log_diff.dropna(how='all', inplace=True)
 
@@ -454,7 +459,7 @@ def getENUErrors(log_dict, device_android, device_uliss, acq_list, provider_ulis
                     lambda row: get3DError(row['east'], row['north'], row['up']), 
                     axis='columns', result_type='expand')
                 
-                log_diff["Device"] = f"{device} ({provider})"
+                log_diff["Device"] = f"{name} ({provider})"
                 df_diff = pd.concat([df_diff, log_diff])
 
     return df_diff
@@ -571,8 +576,9 @@ def plotBoxPlotCN0PerMode(log_dict, device_android, device_uliss, mode=['TEXTING
     plt.rc('axes', axisbelow=True)
     plt.grid()
     plt.tight_layout()
-    plt.xlabel("Device")
+    #plt.xlabel("Device")
     plt.ylabel("C/N0 [dB-Hz]")
+    ax.set(xlabel=None)
 
     sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False,)
 
@@ -635,8 +641,9 @@ def plotBarSignalsPerMode(log_dict, device_android, device_uliss, mode=['TEXTING
     plt.rc('axes', axisbelow=True)
     plt.grid()
     plt.tight_layout()
-    plt.xlabel("Device")
+    #plt.xlabel("Device")
     plt.ylabel("Number of signals")
+    ax.set(xlabel=None)
 
     sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False,)
 
@@ -707,7 +714,7 @@ def plotMap(locations, extent, scale, marker='', markersize=1, figsize=(8,4)):
 
     # Polylines
     for label, loc in locations.items():
-        ax1.plot(loc['longitude'].to_list(), loc['latitude'].to_list(),
+        ax1.plot(loc['longitude'].to_list(), loc['latitude'].to_list(), color=PALETTE_COLOR_DEVICE[label],
                  linewidth=2, marker=marker, markersize=markersize, transform=ccrs.Geodetic(), label=label)
     
     # Grid
@@ -774,12 +781,21 @@ def plotECDF(log_diff):
 
     device_order = [*PALETTE_COLOR_DEVICE][1:]
 
-    plt.figure(figsize=(6,4))
-    sns.ecdfplot(log_diff, x='2D_error', stat='proportion', hue='Device', hue_order=device_order,
-                 palette=PALETTE_COLOR_DEVICE)
+    plt.figure(figsize=(4,3))
+    with sns.plotting_context(rc={"legend.fontsize":10}):
+        ax = sns.ecdfplot(log_diff, x='2D_error', stat='proportion', hue='Device', hue_order=device_order,
+                    palette=PALETTE_COLOR_DEVICE)
     plt.grid()
     plt.xlim((0,50))
     plt.xlabel("Horizontal error [m]")
+
+    #ax.legend(loc="upper right", frameon=True, fontsize=8)
+    #sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False, fontsize=9)
+    #sns.move_legend(ax, "bottom right", bbox_to_anchor=(1, 1), title=None, frameon=False)
+    #ax.legend(fontsize=8)
+    #plt.legend(title='Team', fontsize='10', title_fontsize='14')
+
+    plt.tight_layout()
 
     return 
 
