@@ -32,6 +32,7 @@ PALETTE_COLOR = {"TEXTING": "#779ECB", "SWINGING": "#FC8EAC", "POCKET":"#50C878"
 
 PALETTE_COLOR_DEVICE = {"AWINDA"  : "#e377c2",
                         "UA (LIGHT-PDR)":"#1f77b4", 
+                        "UA (LIGHT)":"#1f77b4", 
                         "GP7 (GPS)": "#ff7f0e", 
                         "GPW (GPS)": "#2ca02c", 
                         "GPW (FUSED)":"#d62728",
@@ -437,6 +438,11 @@ def getENUErrors(log_dict, device_ref, acq_list, provider_ref, provider_devices)
                 log_android = log_dict[name].loc[(log_dict[name]['provider'] == provider) 
                                                 & (log_dict[name]['acquisition'] == acq)]
                 
+                if provider == 'HYB':
+                    provider_str = 'LIGHT-PDR'
+                else:
+                    provider_str = provider
+                
                 if log_android.empty:
                     continue
 
@@ -459,7 +465,7 @@ def getENUErrors(log_dict, device_ref, acq_list, provider_ref, provider_devices)
                     lambda row: get3DError(row['east'], row['north'], row['up']), 
                     axis='columns', result_type='expand')
                 
-                log_diff["Device"] = f"{name} ({provider})"
+                log_diff["Device"] = f"{name} ({provider_str})"
                 df_diff = pd.concat([df_diff, log_diff])
 
     return df_diff
@@ -777,9 +783,7 @@ def plotEN(log_dict, device_android, device_uliss, acq, provider_uliss, provider
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plotECDF(log_diff):
-
-    device_order = [*PALETTE_COLOR_DEVICE][1:]
+def plotECDF(log_diff, device_order=[*PALETTE_COLOR_DEVICE][1:]):
 
     plt.figure(figsize=(4,3))
     with sns.plotting_context(rc={"legend.fontsize":10}):
